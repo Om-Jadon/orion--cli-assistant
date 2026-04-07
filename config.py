@@ -40,7 +40,7 @@ _user = _load_user_config()
 MODEL_PRIMARY = _user.get("model_primary", _defaults["model_primary"])
 MODEL_FAST    = _user.get("model_fast",    _defaults["model_fast"])
 THEME         = _user.get("theme",         _defaults["theme"])
-MAX_WIDTH     = _user.get("max_width",     _defaults["max_width"])
+MAX_WIDTH     = int(_user.get("max_width",  _defaults["max_width"]))
 
 OLLAMA_BASE        = "http://localhost:11434/v1"   # OpenAI-compatible endpoint (used by openai SDK)
 OLLAMA_API_BASE    = "http://localhost:11434"       # Native Ollama API (used for embeddings, tags, generate)
