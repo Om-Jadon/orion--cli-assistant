@@ -25,8 +25,14 @@ _defaults = {
 
 def _load_user_config() -> dict:
     if CONFIG_FILE.exists():
-        with open(CONFIG_FILE, "rb") as f:
-            return tomllib.load(f)
+        try:
+            with open(CONFIG_FILE, "rb") as f:
+                return tomllib.load(f)
+        except tomllib.TOMLDecodeError as e:
+            raise SystemExit(
+                f"Error: {CONFIG_FILE} contains invalid TOML.\n{e}\n"
+                "Fix the file or delete it to use defaults."
+            ) from e
     return {}
 
 _user = _load_user_config()
@@ -36,8 +42,8 @@ MODEL_FAST    = _user.get("model_fast",    _defaults["model_fast"])
 THEME         = _user.get("theme",         _defaults["theme"])
 MAX_WIDTH     = _user.get("max_width",     _defaults["max_width"])
 
-OLLAMA_BASE        = "http://localhost:11434/v1"
-OLLAMA_API_BASE    = "http://localhost:11434"
+OLLAMA_BASE        = "http://localhost:11434/v1"   # OpenAI-compatible endpoint (used by openai SDK)
+OLLAMA_API_BASE    = "http://localhost:11434"       # Native Ollama API (used for embeddings, tags, generate)
 EMBED_MODEL        = "nomic-embed-text"
 EMBED_DIM          = 256   # Matryoshka truncation of nomic-embed-text's 768-dim output
 

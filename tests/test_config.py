@@ -22,6 +22,7 @@ def test_default_models():
 def test_default_theme_and_width():
     import config
     assert config.THEME == "mocha"
+    assert isinstance(config.MAX_WIDTH, int)
     assert config.MAX_WIDTH == 100
 
 
@@ -48,10 +49,10 @@ def test_keep_alive_values_are_strings():
 
 def test_context_budgets_are_positive_ints():
     import config
-    assert config.CONTEXT_PROFILE > 0
-    assert config.CONTEXT_RECENT > 0
-    assert config.CONTEXT_RETRIEVED > 0
-    assert config.CONTEXT_RESERVE > 0
+    for name in ("CONTEXT_PROFILE", "CONTEXT_RECENT", "CONTEXT_RETRIEVED", "CONTEXT_RESERVE"):
+        value = getattr(config, name)
+        assert isinstance(value, int), f"{name} must be int, got {type(value)}"
+        assert value > 0, f"{name} must be positive"
 
 
 def test_toml_override_updates_public_constants(tmp_path):
@@ -64,21 +65,26 @@ def test_toml_override_updates_public_constants(tmp_path):
     toml_file.write_text('model_primary = "qwen3:14b"\nmax_width = 80\n')
 
     import config as cfg
-    with patch.object(cfg, "CONFIG_FILE", toml_file):
+    try:
+        with patch.object(cfg, "CONFIG_FILE", toml_file):
+            importlib.reload(cfg)
+            assert cfg.MODEL_PRIMARY == "qwen3:14b"
+            assert cfg.MODEL_FAST == "qwen3:4b"   # unchanged — not in toml
+            assert cfg.MAX_WIDTH == 80
+    finally:
+        # Restore defaults — other tests in this process need clean module state
         importlib.reload(cfg)
-        assert cfg.MODEL_PRIMARY == "qwen3:14b"
-        assert cfg.MAX_WIDTH == 80
-
-    # Restore defaults — other tests in this process need clean module state
-    importlib.reload(cfg)
 
 
 def test_toml_missing_returns_defaults(tmp_path):
     """When config.toml is absent, module falls back to hardcoded defaults."""
     import config as cfg
-    with patch.object(cfg, "CONFIG_FILE", tmp_path / "nonexistent.toml"):
+    try:
+        with patch.object(cfg, "CONFIG_FILE", tmp_path / "nonexistent.toml"):
+            importlib.reload(cfg)
+            assert cfg.MODEL_PRIMARY == "qwen3:8b"
+            assert cfg.MODEL_FAST == "qwen3:4b"
+            assert cfg.THEME == "mocha"
+            assert cfg.MAX_WIDTH == 100
+    finally:
         importlib.reload(cfg)
-        assert cfg.MODEL_PRIMARY == "qwen3:8b"
-        assert cfg.MAX_WIDTH == 100
-
-    importlib.reload(cfg)
