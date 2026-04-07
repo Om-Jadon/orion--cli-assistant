@@ -12,11 +12,16 @@ def test_paths_are_under_home():
     assert config.HISTORY_FILE.is_relative_to(home)
 
 
-def test_default_models():
+def test_default_model():
     import config
-    assert config.MODEL_PRIMARY == "qwen3:8b"
-    assert config.MODEL_FAST == "qwen3:4b"
+    assert config.MODEL == "qwen3:4b"
     assert config.EMBED_MODEL == "nomic-embed-text"
+
+
+def test_think_off_is_dict():
+    import config
+    assert isinstance(config.THINK_OFF, dict)
+    assert config.THINK_OFF.get("think") is False
 
 
 def test_default_theme_and_width():
@@ -57,19 +62,17 @@ def test_context_budgets_are_positive_ints():
 
 def test_toml_override_updates_public_constants(tmp_path):
     """
-    When ~/.orion/config.toml exists, the public constants (MODEL_PRIMARY,
-    MAX_WIDTH, etc.) must reflect its values — not just the loader return value.
+    When ~/.orion/config.toml exists, the public constants must reflect its values.
     Uses importlib.reload to re-execute module-level code with a patched CONFIG_FILE.
     """
     toml_file = tmp_path / "config.toml"
-    toml_file.write_text('model_primary = "qwen3:14b"\nmax_width = 80\n')
+    toml_file.write_text('model = "qwen3:14b"\nmax_width = 80\n')
 
     import config as cfg
     try:
         with patch.object(cfg, "CONFIG_FILE", toml_file):
             importlib.reload(cfg)
-            assert cfg.MODEL_PRIMARY == "qwen3:14b"
-            assert cfg.MODEL_FAST == "qwen3:4b"   # unchanged — not in toml
+            assert cfg.MODEL == "qwen3:14b"
             assert cfg.MAX_WIDTH == 80
     finally:
         # Restore defaults — other tests in this process need clean module state
@@ -82,8 +85,7 @@ def test_toml_missing_returns_defaults(tmp_path):
     try:
         with patch.object(cfg, "CONFIG_FILE", tmp_path / "nonexistent.toml"):
             importlib.reload(cfg)
-            assert cfg.MODEL_PRIMARY == "qwen3:8b"
-            assert cfg.MODEL_FAST == "qwen3:4b"
+            assert cfg.MODEL == "qwen3:4b"
             assert cfg.THEME == "mocha"
             assert cfg.MAX_WIDTH == 100
     finally:

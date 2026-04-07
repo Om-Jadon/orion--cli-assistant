@@ -8,7 +8,6 @@ DB_PATH       = ORION_DIR / "memory.db"
 HISTORY_FILE  = ORION_DIR / "history"
 
 # Preserve any CONFIG_FILE override injected before reload (e.g. in tests).
-# On first import _sys.modules[__name__] may not exist yet, so fall back to default.
 _mod = _sys.modules.get(__name__)
 CONFIG_FILE = (
     _mod.CONFIG_FILE
@@ -17,10 +16,9 @@ CONFIG_FILE = (
 )
 
 _defaults = {
-    "model_primary": "qwen3:8b",
-    "model_fast":    "qwen3:4b",
-    "theme":         "mocha",
-    "max_width":     100,
+    "model": "qwen3:4b",
+    "theme": "mocha",
+    "max_width": 100,
 }
 
 def _load_user_config() -> dict:
@@ -37,10 +35,11 @@ def _load_user_config() -> dict:
 
 _user = _load_user_config()
 
-MODEL_PRIMARY = _user.get("model_primary", _defaults["model_primary"])
-MODEL_FAST    = _user.get("model_fast",    _defaults["model_fast"])
-THEME         = _user.get("theme",         _defaults["theme"])
-MAX_WIDTH     = int(_user.get("max_width",  _defaults["max_width"]))
+MODEL     = _user.get("model",     _defaults["model"])
+THEME     = _user.get("theme",     _defaults["theme"])
+MAX_WIDTH = int(_user.get("max_width", _defaults["max_width"]))
+
+THINK_OFF = {"think": False}   # passed with every request; /think toggles think=True at call site
 
 OLLAMA_BASE        = "http://localhost:11434/v1"   # OpenAI-compatible endpoint (used by openai SDK)
 OLLAMA_API_BASE    = "http://localhost:11434"       # Native Ollama API (used for embeddings, tags, generate)

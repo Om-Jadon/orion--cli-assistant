@@ -34,16 +34,7 @@ def test_ollama_reachable():
 
 
 @requires_ollama
-def test_primary_model_available():
-    models = available_models()
-    assert any("qwen3:8b" in m for m in models), (
-        f"qwen3:8b not found. Available: {models}\n"
-        "Run: ollama pull qwen3:8b"
-    )
-
-
-@requires_ollama
-def test_fast_model_available():
+def test_model_available():
     models = available_models()
     assert any("qwen3:4b" in m for m in models), (
         f"qwen3:4b not found. Available: {models}\n"
@@ -60,7 +51,7 @@ async def test_streaming_produces_tokens():
     tokens = []
 
     stream = await client.chat.completions.create(
-        model="qwen3:8b",
+        model="qwen3:4b",
         messages=[{"role": "user", "content": "Say hello in 5 words"}],
         stream=True,
         extra_body={"think": False, "keep_alive": "10m"}
@@ -86,7 +77,7 @@ async def test_keep_alive_accepted():
     client = AsyncOpenAI(base_url=OLLAMA_V1_BASE, api_key="ollama")
 
     stream = await client.chat.completions.create(
-        model="qwen3:8b",
+        model="qwen3:4b",
         messages=[{"role": "user", "content": "Say yes"}],
         stream=True,
         extra_body={"think": False, "keep_alive": "10m"}
