@@ -24,7 +24,6 @@
 ├── core/
 │   ├── agent.py                   ← PydanticAI agent setup
 │   ├── context.py                 ← 3-tier context assembly
-│   ├── router.py                  ← model selection (8B vs 4B)
 │   └── streaming.py               ← live token stream → Rich renderer
 │
 ├── memory/
@@ -106,31 +105,36 @@ DB_PATH       = ORION_DIR / "memory.db"
 HISTORY_FILE  = ORION_DIR / "history"
 CONFIG_FILE   = ORION_DIR / "config.toml"
 
-# Defaults — can be overridden by ~/.orion/config.toml
 _defaults = {
-    "model_primary": "qwen3:4b",
-    "model_fast":    "qwen3:4b",
-    "theme":         "mocha",
-    "max_width":     100,
+    "model":     "qwen3:4b",
+    "theme":     "mocha",
+    "max_width": 100,
 }
 
 def _load_user_config() -> dict:
     if CONFIG_FILE.exists():
-        with open(CONFIG_FILE, "rb") as f:
-            return tomllib.load(f)
+        try:
+            with open(CONFIG_FILE, "rb") as f:
+                return tomllib.load(f)
+        except tomllib.TOMLDecodeError as e:
+            raise SystemExit(
+                f"Error: {CONFIG_FILE} contains invalid TOML.\n{e}\n"
+                "Fix the file or delete it to use defaults."
+            ) from e
     return {}
 
 _user = _load_user_config()
 
-MODEL_PRIMARY = _user.get("model_primary", _defaults["model_primary"])
-MODEL_FAST    = _user.get("model_fast",    _defaults["model_fast"])
-THEME         = _user.get("theme",         _defaults["theme"])
-MAX_WIDTH     = _user.get("max_width",     _defaults["max_width"])
+MODEL     = _user.get("model",     _defaults["model"])
+THEME     = _user.get("theme",     _defaults["theme"])
+MAX_WIDTH = int(_user.get("max_width", _defaults["max_width"]))
 
-OLLAMA_BASE        = "http://localhost:11434/v1"
-OLLAMA_API_BASE    = "http://localhost:11434"
+THINK_OFF = {"think": False}   # passed with every request; /think toggles think=True at call site
+
+OLLAMA_BASE        = "http://localhost:11434/v1"   # OpenAI-compatible endpoint (used by openai SDK)
+OLLAMA_API_BASE    = "http://localhost:11434"       # Native Ollama API (used for embeddings, tags, generate)
 EMBED_MODEL        = "nomic-embed-text"
-EMBED_DIM          = 256
+EMBED_DIM          = 256   # Matryoshka truncation of nomic-embed-text's 768-dim output
 
 # keep_alive values sent with every Ollama request
 KEEP_ALIVE_ACTIVE  = "10m"
@@ -169,7 +173,7 @@ async def test():
 asyncio.run(test())
 ```
 
-**Pass condition:** Tokens appear one by one within ~1–2 seconds at 5–8 t/s.
+**Pass condition:** Tokens appear one by one within ~1–2 seconds. qwen3:4b fits in 4GB VRAM → 15–25 t/s.
 
 ---
 
@@ -316,7 +320,7 @@ def build_session() -> PromptSession:
         enable_open_in_editor=True,
     )
 
-def get_prompt_text(model: str = "qwen3-8b") -> HTML:
+def get_prompt_text(model: str = "qwen3:4b") -> HTML:
     return HTML(f'<ansibrightblack>{model}</ansibrightblack> <ansiblue>❯</ansiblue> ')
 
 async def get_input(session: PromptSession, model: str) -> str:
@@ -330,7 +334,7 @@ import asyncio
 import httpx
 from rich.console import Console
 from rich.text import Text
-from config import OLLAMA_API_BASE, OLLAMA_BASE, MODEL_PRIMARY, DB_PATH
+from config import OLLAMA_API_BASE, MODEL, DB_PATH
 
 def show_startup(console: Console, model: str):
     console.clear()
@@ -401,7 +405,7 @@ import sys
 from ui.renderer import console, print_user, print_separator, stream_response
 from ui.input import build_session, get_input
 from ui.startup import show_startup, prewarm_model
-from config import MODEL_PRIMARY
+from config import MODEL
 
 async def main():
     # One-shot mode: orion open the latest markiplier video
@@ -410,14 +414,14 @@ async def main():
         await run_once(query)
         return
 
-    show_startup(console, MODEL_PRIMARY)
-    await prewarm_model(MODEL_PRIMARY)
+    show_startup(console, MODEL)
+    await prewarm_model(MODEL)
 
     session = build_session()
 
     while True:
         try:
-            user_input = await get_input(session, MODEL_PRIMARY)
+            user_input = await get_input(session, MODEL)
             if not user_input.strip():
                 continue
             if user_input.strip() in ("/exit", "/quit", "exit", "quit"):
@@ -465,13 +469,13 @@ uv add pydantic-ai
 from pydantic_ai import Agent
 from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.providers.openai import OpenAIProvider
-from config import OLLAMA_BASE, MODEL_PRIMARY, KEEP_ALIVE_ACTIVE
+from config import OLLAMA_BASE, MODEL, KEEP_ALIVE_ACTIVE
 import os
 from pathlib import Path
 
-def build_agent(model_name: str = MODEL_PRIMARY, think: bool = False) -> Agent:
+def build_agent(think: bool = False) -> Agent:
     model = OpenAIModel(
-        model_name,
+        MODEL,
         provider=OpenAIProvider(
             base_url=OLLAMA_BASE,
             api_key="ollama"
@@ -520,31 +524,6 @@ RULES:
 - Respond in plain Markdown. No HTML.
 - When opening media or YouTube content, use open_media — not a raw URL.
 """
-```
-
-### core/router.py
-
-```python
-from config import MODEL_PRIMARY, MODEL_FAST
-
-# Queries that need reasoning or generation → 8B
-THINK_TRIGGERS = [
-    "explain", "summarize", "analyze", "research", "write", "draft",
-    "plan", "compare", "why", "how does", "what is", "describe",
-    "review", "suggest", "recommend"
-]
-
-def select_model(query: str) -> str:
-    """
-    Use 4B for simple tool-dispatch queries.
-    Use 8B whenever reasoning or generation is likely needed.
-    Default to 8B when uncertain.
-    """
-    q = query.lower()
-    if any(t in q for t in THINK_TRIGGERS):
-        return MODEL_PRIMARY
-    # Simple tool-dispatch: open, find, list, move, rename, search, show
-    return MODEL_FAST
 ```
 
 ### core/streaming.py
@@ -804,17 +783,15 @@ from ui.renderer import console, print_user, print_separator
 from ui.input import build_session, get_input
 from ui.startup import show_startup, prewarm_model
 from core.agent import build_agent
-from core.router import select_model
 from core.streaming import run_with_streaming
-from config import MODEL_PRIMARY
+from config import MODEL
 
 session_id = str(uuid.uuid4())
-current_model = MODEL_PRIMARY
 think_mode = False
-agent = build_agent(current_model, think=think_mode)
+agent = build_agent(think=think_mode)
 
 async def main():
-    global agent, current_model, think_mode
+    global agent, think_mode
 
     # One-shot: orion open the latest markiplier video
     if len(sys.argv) > 1 and sys.stdin.isatty() and sys.argv[1] != "--init":
@@ -831,13 +808,13 @@ async def main():
         print(response)
         return
 
-    show_startup(console, current_model)
-    await prewarm_model(current_model)
+    show_startup(console, MODEL)
+    await prewarm_model(MODEL)
     session = build_session()
 
     while True:
         try:
-            user_input = await get_input(session, current_model)
+            user_input = await get_input(session, MODEL)
             if not user_input.strip():
                 continue
             if user_input.strip() in ("/exit", "/quit", "exit", "quit"):
@@ -854,12 +831,6 @@ async def main():
             break
 
 async def run_once(query: str):
-    global agent, current_model
-    model = select_model(query)
-    if model != current_model:
-        current_model = model
-        agent = build_agent(current_model, think=think_mode)
-
     print_user(query)
     await run_with_streaming(agent, query)
     print_separator()
@@ -1526,9 +1497,7 @@ async def handle_slash(user_input: str):
         console.print("""
 [accent]orion slash commands[/accent]
 
-  [dim]/think[/dim]    force chain-of-thought reasoning
-  [dim]/fast[/dim]     switch to qwen3-4b (quick tasks)
-  [dim]/slow[/dim]     switch to qwen3-8b (reasoning tasks)
+  [dim]/think[/dim]    toggle chain-of-thought reasoning on/off
   [dim]/clear[/dim]    clear the terminal
   [dim]/undo[/dim]     undo last file operation
   [dim]/history[/dim]  show this session's conversation
@@ -1538,21 +1507,10 @@ async def handle_slash(user_input: str):
 """)
 
     elif cmd == "/think":
-        think_mode = True
-        agent = build_agent(current_model, think=True)
-        console.print("[success]Chain-of-thought enabled.[/success]")
-
-    elif cmd == "/fast":
-        from config import MODEL_FAST
-        current_model = MODEL_FAST
-        agent = build_agent(current_model, think=think_mode)
-        console.print(f"[success]Switched to {MODEL_FAST}[/success]")
-
-    elif cmd == "/slow":
-        from config import MODEL_PRIMARY
-        current_model = MODEL_PRIMARY
-        agent = build_agent(current_model, think=think_mode)
-        console.print(f"[success]Switched to {MODEL_PRIMARY}[/success]")
+        think_mode = not think_mode
+        agent = build_agent(think=think_mode)
+        state = "enabled" if think_mode else "disabled"
+        console.print(f"[success]Thinking mode {state}.[/success]")
 
     elif cmd == "/clear":
         console.clear()
@@ -1663,10 +1621,9 @@ Now: `orion open the latest markiplier video`
 
 ```toml
 # ~/.orion/config.toml
-model_primary = "qwen3:4b"
-model_fast    = "qwen3:4b"
-theme         = "mocha"
-max_width     = 100
+model     = "qwen3:4b"
+theme     = "mocha"
+max_width = 100
 ```
 
 ---

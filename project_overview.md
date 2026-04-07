@@ -35,7 +35,6 @@ cat build.log | orion "summarize the errors"
 ├── core/
 │   ├── agent.py                   ← PydanticAI agent setup
 │   ├── context.py                 ← 3-tier context assembly
-│   ├── router.py                  ← model selection (8B vs 4B)
 │   └── streaming.py               ← token stream → Rich renderer
 │
 ├── memory/
