@@ -53,8 +53,11 @@ async def manage_files(
         ok, dst = validate_path(destination)
         if not ok:
             return dst
-        shutil.move(src, dst)
-        return f"Moved {Path(src).name} → {dst}"
+        try:
+            shutil.move(src, dst)
+            return f"Moved {Path(src).name} → {dst}"
+        except Exception as e:
+            return f"Error moving file: {e}"
 
     if action == "rename":
         ok, src = validate_path(path)
@@ -64,8 +67,11 @@ async def manage_files(
         ok, dst = validate_path(new_path)
         if not ok:
             return dst
-        os.rename(src, dst)
-        return f"Renamed to {destination}"
+        try:
+            os.rename(src, dst)
+            return f"Renamed to {destination}"
+        except Exception as e:
+            return f"Error renaming file: {e}"
 
     if action == "delete":
         ok, resolved = validate_path(path)
