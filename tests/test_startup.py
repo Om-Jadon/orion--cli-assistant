@@ -89,8 +89,8 @@ async def test_prewarm_skipped_for_cloud_provider():
         mock_httpx.AsyncClient.assert_not_called()
 
 
-def test_cloud_tagline_in_show_startup():
-    """show_startup prints 'versatile · {provider} · cloud' for cloud providers."""
+def test_tagline_in_show_startup():
+    """show_startup prints 'quick · fluent · native' unconditionally."""
     from rich.console import Console
     from io import StringIO
     from unittest.mock import patch as _patch
@@ -103,7 +103,6 @@ def test_cloud_tagline_in_show_startup():
          _patch("ui.startup._check_index", return_value=False):
         su.show_startup(con, "openai:gpt-4o")
     output = buf.getvalue()
-    assert "versatile" in output
-    assert "openai" in output
-    assert "cloud" in output
-    assert "offline" not in output
+    assert "quick" in output
+    assert "fluent" in output
+    assert "native" in output

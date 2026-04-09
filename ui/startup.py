@@ -18,10 +18,7 @@ def show_startup(console: Console, model: str):
     console.print(wordmark)
     console.print("  [#6C7086]" + "─" * 40 + "[/#6C7086]")
 
-    if PROVIDER == "ollama":
-        console.print("  [#6C7086]versatile · local · private[/#6C7086]")
-    else:
-        console.print(f"  [#6C7086]versatile · {PROVIDER} · cloud[/#6C7086]")
+    console.print("  [#6C7086]quick · fluent · native[/#6C7086]")
 
     console.print()
 
