@@ -92,16 +92,26 @@ def test_toml_missing_returns_defaults(tmp_path):
         importlib.reload(cfg)
 
 
-def test_default_model_string_is_none():
+def test_default_model_string_is_none(tmp_path):
     """When model_string is absent from config.toml, MODEL_STRING must be None."""
-    import config
-    assert config.MODEL_STRING is None
+    import importlib
+    from unittest.mock import patch
+    import config as cfg
+    with patch.object(cfg, "CONFIG_FILE", tmp_path / "nonexistent.toml"):
+        importlib.reload(cfg)
+        assert cfg.MODEL_STRING is None
+    importlib.reload(cfg)
 
 
-def test_default_provider_is_ollama():
+def test_default_provider_is_ollama(tmp_path):
     """When MODEL_STRING is None, PROVIDER must default to 'ollama'."""
-    import config
-    assert config.PROVIDER == "ollama"
+    import importlib
+    from unittest.mock import patch
+    import config as cfg
+    with patch.object(cfg, "CONFIG_FILE", tmp_path / "nonexistent.toml"):
+        importlib.reload(cfg)
+        assert cfg.PROVIDER == "ollama"
+    importlib.reload(cfg)
 
 
 def test_cloud_api_key_vars_contains_all_providers():
