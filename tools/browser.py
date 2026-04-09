@@ -5,7 +5,12 @@ from safety.boundaries import validate_path
 
 
 async def open_url(url: str) -> str:
-    """Open a URL or local file in the default browser/app."""
+    """
+    Open a web URL in the default browser, or a local file in its default app.
+
+    Args:
+        url: The full URL (e.g. 'https://example.com') or local file path to open.
+    """
     if url.startswith(("http://", "https://")):
         if not _is_online():
             return "Offline: cannot open web URLs right now."
