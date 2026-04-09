@@ -13,10 +13,11 @@ def should_retrieve(query: str) -> bool:
 
 async def hybrid_search(conn: sqlite3.Connection, query: str, k: int = 5) -> list[dict]:
     """Reciprocal Rank Fusion over FTS5 keyword + sqlite-vec semantic results."""
+    # BM25 returns negative scores; most-negative = best match, so ASC sorts best matches first
     fts_results = conn.execute(
         """SELECT rowid, content, bm25(memory_fts) as score
            FROM memory_fts WHERE memory_fts MATCH ?
-           ORDER BY score LIMIT 20""",
+           ORDER BY score ASC LIMIT 20""",
         (query,)
     ).fetchall()
 
