@@ -1,8 +1,11 @@
 import pytest
 import httpx
+import os
+import time
 
 OLLAMA_API_BASE = "http://localhost:11434"
 OLLAMA_V1_BASE  = "http://localhost:11434/v1"
+TEST_MODEL = os.getenv("ORION_TEST_MODEL", "gemma4:latest")
 
 
 def ollama_running() -> bool:
@@ -36,9 +39,9 @@ def test_ollama_reachable():
 @requires_ollama
 def test_model_available():
     models = available_models()
-    assert any("qwen3:4b" in m for m in models), (
-        f"qwen3:4b not found. Available: {models}\n"
-        "Run: ollama pull qwen3:4b"
+    assert any(TEST_MODEL == m for m in models), (
+        f"{TEST_MODEL} not found. Available: {models}\n"
+        f"Run: ollama pull {TEST_MODEL}"
     )
 
 
@@ -51,7 +54,7 @@ async def test_streaming_produces_tokens():
     tokens = []
 
     stream = await client.chat.completions.create(
-        model="qwen3:4b",
+        model=TEST_MODEL,
         messages=[{"role": "user", "content": "Say hello in 5 words"}],
         stream=True,
         extra_body={"think": False, "keep_alive": "10m"}
@@ -77,7 +80,7 @@ async def test_keep_alive_accepted():
     client = AsyncOpenAI(base_url=OLLAMA_V1_BASE, api_key="ollama")
 
     stream = await client.chat.completions.create(
-        model="qwen3:4b",
+        model=TEST_MODEL,
         messages=[{"role": "user", "content": "Say yes"}],
         stream=True,
         extra_body={"think": False, "keep_alive": "10m"}
@@ -90,3 +93,60 @@ async def test_keep_alive_accepted():
             break
 
     assert got_response
+
+
+@requires_ollama
+async def test_realistic_prompt_response_timing():
+    """Measure response latency for a realistic end-user Orion prompt."""
+    from openai import AsyncOpenAI
+
+    max_ttfb_sec = float(os.getenv("ORION_MAX_TTFB_SEC", "10"))
+    max_total_sec = float(os.getenv("ORION_MAX_TOTAL_SEC", "90"))
+
+    client = AsyncOpenAI(base_url=OLLAMA_V1_BASE, api_key="ollama")
+    prompt = (
+        "Open the latest Markiplier video and explain what steps you would take "
+        "to find it safely on Linux. Keep it concise and actionable."
+    )
+
+    start = time.perf_counter()
+    first_token_at: float | None = None
+    token_count = 0
+
+    stream = await client.chat.completions.create(
+        model=TEST_MODEL,
+        messages=[{"role": "user", "content": prompt}],
+        stream=True,
+        extra_body={"think": False, "keep_alive": "10m"}
+    )
+
+    async for chunk in stream:
+        delta = chunk.choices[0].delta.content
+        if delta:
+            token_count += 1
+            if first_token_at is None:
+                first_token_at = time.perf_counter()
+
+    end = time.perf_counter()
+
+    assert first_token_at is not None, "Model produced no output tokens"
+
+    ttfb_sec = first_token_at - start
+    total_sec = end - start
+
+    print(
+        "\n"
+        f"Model: {TEST_MODEL}\n"
+        f"Prompt length: {len(prompt)} chars\n"
+        f"Token chunks: {token_count}\n"
+        f"Time to first token: {ttfb_sec:.2f}s\n"
+        f"Total response time: {total_sec:.2f}s\n"
+    )
+
+    assert token_count > 0, "Expected at least one token chunk"
+    assert ttfb_sec <= max_ttfb_sec, (
+        f"TTFB {ttfb_sec:.2f}s exceeded ORION_MAX_TTFB_SEC={max_ttfb_sec:.2f}s"
+    )
+    assert total_sec <= max_total_sec, (
+        f"Total {total_sec:.2f}s exceeded ORION_MAX_TOTAL_SEC={max_total_sec:.2f}s"
+    )
