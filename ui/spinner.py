@@ -1,8 +1,11 @@
 import asyncio
 import itertools
+import sys
 from rich.console import Console
 
 BRAILLE = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
+THINKING_COLOR = "\033[3;38;2;88;91;112m"  # italic #585B70 (Mocha thinking)
+RESET = "\033[0m"
 
 class Spinner:
     """Asyncio-native spinner — no threads, no race conditions with asyncio."""
@@ -29,12 +32,11 @@ class Spinner:
                 await self._task
             except asyncio.CancelledError:
                 pass
-        self.console.print("\r" + " " * 60 + "\r", end="")
+        sys.stdout.write("\r" + " " * 60 + "\r\n")
+        sys.stdout.flush()
 
     async def _spin(self):
         for frame in itertools.cycle(BRAILLE):
-            self.console.print(
-                f"\r[thinking]{frame} {self._label}[/thinking]",
-                end="", highlight=False
-            )
+            sys.stdout.write(f"\r{THINKING_COLOR}{frame} {self._label}{RESET}")
+            sys.stdout.flush()
             await asyncio.sleep(0.08)
