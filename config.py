@@ -16,7 +16,7 @@ CONFIG_FILE = (
 )
 
 _defaults = {
-    "model": "qwen3:4b",
+    "model": "gemma4:latest",
     "theme": "mocha",
     "max_width": 100,
 }
@@ -38,6 +38,35 @@ _user = _load_user_config()
 MODEL     = _user.get("model",     _defaults["model"])
 THEME     = _user.get("theme",     _defaults["theme"])
 MAX_WIDTH = int(_user.get("max_width", _defaults["max_width"]))
+
+# --- Cloud provider support ---
+
+MODEL_STRING: str | None = _user.get("model_string", None)
+
+CLOUD_API_KEY_VARS: dict[str, str] = {
+    "openai":    "OPENAI_API_KEY",
+    "anthropic": "ANTHROPIC_API_KEY",
+    "gemini":    "GEMINI_API_KEY",
+    "groq":      "GROQ_API_KEY",
+    "mistral":   "MISTRAL_API_KEY",
+}
+
+def _detect_provider(model_string: str | None) -> str:
+    if model_string is None:
+        return "ollama"
+    if model_string.startswith("openai:"):
+        return "openai"
+    if model_string.startswith("anthropic:"):
+        return "anthropic"
+    if model_string.startswith("gemini-"):
+        return "gemini"
+    if model_string.startswith("groq:"):
+        return "groq"
+    if model_string.startswith("mistral:"):
+        return "mistral"
+    return "ollama"
+
+PROVIDER: str = _detect_provider(MODEL_STRING)
 
 THINK_OFF = {"think": False}   # passed with every request; /think toggles think=True at call site
 

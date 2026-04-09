@@ -14,7 +14,7 @@ def test_paths_are_under_home():
 
 def test_default_model():
     import config
-    assert config.MODEL == "qwen3:4b"
+    assert config.MODEL == "gemma4:latest"
     assert config.EMBED_MODEL == "nomic-embed-text"
 
 
@@ -66,13 +66,13 @@ def test_toml_override_updates_public_constants(tmp_path):
     Uses importlib.reload to re-execute module-level code with a patched CONFIG_FILE.
     """
     toml_file = tmp_path / "config.toml"
-    toml_file.write_text('model = "qwen3:14b"\nmax_width = 80\n')
+    toml_file.write_text('model = "gemma4:latest"\nmax_width = 80\n')
 
     import config as cfg
     try:
         with patch.object(cfg, "CONFIG_FILE", toml_file):
             importlib.reload(cfg)
-            assert cfg.MODEL == "qwen3:14b"
+            assert cfg.MODEL == "gemma4:latest"
             assert cfg.MAX_WIDTH == 80
     finally:
         # Restore defaults — other tests in this process need clean module state
@@ -85,8 +85,66 @@ def test_toml_missing_returns_defaults(tmp_path):
     try:
         with patch.object(cfg, "CONFIG_FILE", tmp_path / "nonexistent.toml"):
             importlib.reload(cfg)
-            assert cfg.MODEL == "qwen3:4b"
+            assert cfg.MODEL == "gemma4:latest"
             assert cfg.THEME == "mocha"
             assert cfg.MAX_WIDTH == 100
     finally:
         importlib.reload(cfg)
+
+
+def test_default_model_string_is_none():
+    """When model_string is absent from config.toml, MODEL_STRING must be None."""
+    import config
+    assert config.MODEL_STRING is None
+
+
+def test_default_provider_is_ollama():
+    """When MODEL_STRING is None, PROVIDER must default to 'ollama'."""
+    import config
+    assert config.PROVIDER == "ollama"
+
+
+def test_cloud_api_key_vars_contains_all_providers():
+    import config
+    required = {"openai", "anthropic", "gemini", "groq", "mistral"}
+    assert required.issubset(config.CLOUD_API_KEY_VARS.keys())
+
+
+def test_provider_detection_from_model_string(tmp_path):
+    """PROVIDER is derived from the model_string prefix in config.toml."""
+    import importlib
+    from unittest.mock import patch
+    cases = [
+        ("openai:gpt-4o",                  "openai"),
+        ("anthropic:claude-sonnet-4-5",    "anthropic"),
+        ("gemini-2.0-flash",               "gemini"),
+        ("groq:llama-3.3-70b-versatile",   "groq"),
+        ("mistral:mistral-large-latest",    "mistral"),
+        ("qwen3:4b",                        "ollama"),
+    ]
+    import config as cfg
+    for model_str, expected_provider in cases:
+        toml_file = tmp_path / f"{expected_provider}.toml"
+        toml_file.write_text(f'model_string = "{model_str}"\n')
+        with patch.object(cfg, "CONFIG_FILE", toml_file):
+            importlib.reload(cfg)
+            assert cfg.MODEL_STRING == model_str
+            assert cfg.PROVIDER == expected_provider, (
+                f"Expected PROVIDER={expected_provider!r} for model_string={model_str!r}, "
+                f"got {cfg.PROVIDER!r}"
+            )
+    importlib.reload(cfg)
+
+
+def test_model_string_none_when_absent(tmp_path):
+    """model_string key absent from config.toml -> MODEL_STRING is None."""
+    import importlib
+    from unittest.mock import patch
+    import config as cfg
+    toml_file = tmp_path / "config.toml"
+    toml_file.write_text('model = "qwen3:4b"\n')
+    with patch.object(cfg, "CONFIG_FILE", toml_file):
+        importlib.reload(cfg)
+        assert cfg.MODEL_STRING is None
+        assert cfg.PROVIDER == "ollama"
+    importlib.reload(cfg)
