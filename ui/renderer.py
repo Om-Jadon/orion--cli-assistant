@@ -1,8 +1,8 @@
-import shutil
 from rich.console import Console
 from rich.theme import Theme
 from rich.markdown import Markdown
 from rich.live import Live
+from config import MAX_WIDTH
 
 MOCHA = Theme({
     "user":      "bold #CDD6F4",
@@ -20,7 +20,7 @@ MOCHA = Theme({
 console = Console(
     theme=MOCHA,
     highlight=False,
-    width=min(shutil.get_terminal_size().columns, 100)
+    width=MAX_WIDTH
 )
 
 def print_user(text: str):

@@ -12,7 +12,7 @@ def test_console_width_capped_at_100():
     assert console.width <= 100
 
 
-def test_print_user_does_not_raise(capsys):
+def test_print_user_does_not_raise():
     from ui.renderer import print_user
     print_user("hello world")  # should not raise
 
