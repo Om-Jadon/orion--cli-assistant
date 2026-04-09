@@ -1,14 +1,21 @@
 import asyncio
 import sys
+import uuid
 from ui.renderer import console, print_user, print_separator
 from ui.input import build_session, get_input
 from ui.startup import show_startup, prewarm_model
 from core.agent import build_agent
 from core.streaming import run_with_streaming
+from core.context import build_context
+from memory.db import get_connection
+from memory.store import save_turn
+from memory.extractor import extract_and_store
 from config import MODEL
 
 think_mode = False
 agent = build_agent(think=think_mode)
+session_id = str(uuid.uuid4())
+conn = get_connection()
 
 
 async def main():
@@ -29,13 +36,20 @@ async def main():
         print(response)
         return
 
+    if "--init" in sys.argv:
+        from memory.indexer import scan_home
+        console.print("[accent]Building file index...[/accent]")
+        scan_home(conn, verbose=True)
+        console.print("[success]Done.[/success]")
+        return
+
     show_startup(console, MODEL)
     await prewarm_model(MODEL)
     session = build_session()
 
     while True:
         try:
-            user_input = await get_input(session, MODEL)
+            user_input = await get_input(session)
             if not user_input.strip():
                 continue
             if user_input.strip() in ("/exit", "/quit", "exit", "quit"):
@@ -54,7 +68,16 @@ async def main():
 
 async def run_once(query: str):
     print_user(query)
-    await run_with_streaming(agent, query)
+
+    save_turn(conn, session_id, "user", query)
+    extract_and_store(conn, query)
+
+    context = await build_context(conn, query, session_id)
+    response = await run_with_streaming(agent, query, context=context)
+
+    if response:
+        save_turn(conn, session_id, "assistant", response)
+
     print_separator()
 
 
