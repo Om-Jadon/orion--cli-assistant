@@ -1,7 +1,7 @@
-# Orion — Local AI Assistant
+# Orion — Versatile AI Assistant
 
 **Invoke:** `orion open the latest markiplier video`  
-**Stack:** PydanticAI · Ollama + Qwen3-4B · SQLite + sqlite-vec · Rich + prompt_toolkit  
+**Stack:** PydanticAI · Ollama / Cloud LLMs · SQLite + sqlite-vec · Rich + prompt_toolkit  
 **Hardware target:** 16GB RAM · RTX 1650/3050 (4GB VRAM) · Linux  
 **Philosophy:** Minimal yet beautiful — purposeful, not cluttered  
 **Theme:** Catppuccin Mocha
@@ -10,7 +10,7 @@
 
 ## What It Is
 
-Orion is a fully local, offline-capable CLI AI assistant. It runs entirely on your machine — no cloud, no API keys, no telemetry. You talk to it in plain English from any terminal.
+Orion is a versatile CLI AI assistant. It supports running entirely on your machine via Ollama, or using major cloud providers (OpenAI, Anthropic, Gemini, Groq, Mistral) via native PydanticAI model strings. You talk to it in plain English from any terminal.
 
 ```bash
 orion open the latest markiplier video

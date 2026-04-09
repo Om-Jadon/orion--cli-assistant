@@ -1,7 +1,7 @@
 # Orion — Development Plan
 
 **Invoke:** `orion open the latest markiplier video`  
-**Stack:** PydanticAI · Ollama + Qwen3-8B/4B · SQLite + sqlite-vec · Rich + prompt_toolkit  
+**Stack:** PydanticAI · Ollama / Cloud LLMs · SQLite + sqlite-vec · Rich + prompt_toolkit  
 **Hardware target:** 16GB RAM · RTX 1650/3050 (4GB VRAM) · Linux  
 **Philosophy:** Minimal yet beautiful — purposeful, not cluttered  
 **Theme:** Catppuccin Mocha
@@ -508,7 +508,7 @@ def _build_system_prompt() -> str:
     cwd   = os.getcwd()
     shell = os.environ.get("SHELL", "bash")
     home  = Path.home()
-    return f"""You are Orion, a local AI assistant running entirely offline on Linux.
+    return f"""You are Orion, a versatile AI assistant running on Linux.
 
 ENVIRONMENT:
 - Current directory: {cwd}
