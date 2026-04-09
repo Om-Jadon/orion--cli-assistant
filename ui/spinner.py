@@ -14,6 +14,8 @@ class Spinner:
 
     def start(self, label: str = "thinking"):
         """Call from async context. Creates a background asyncio task."""
+        if self._task and not self._task.done():
+            return
         self._label = label
         self._task  = asyncio.create_task(self._spin())
 
@@ -21,7 +23,7 @@ class Spinner:
         self._label = label
 
     async def stop(self):
-        if self._task:
+        if self._task and not self._task.done():
             self._task.cancel()
             try:
                 await self._task
