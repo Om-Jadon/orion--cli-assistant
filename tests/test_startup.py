@@ -30,9 +30,12 @@ def test_check_ollama_false_on_connection_error():
 
 
 def test_show_startup_does_not_raise():
-    from ui.startup import show_startup
+    from unittest.mock import patch
+    import ui.startup as su
     console = MagicMock()
-    show_startup(console, "qwen3:4b")  # should not raise
+    with patch.object(su, "PROVIDER", "ollama"):
+        su.show_startup(console, "qwen3:4b")  # should not raise
+
 
 
 @pytest.mark.asyncio
@@ -87,7 +90,7 @@ async def test_prewarm_skipped_for_cloud_provider():
 
 
 def test_cloud_tagline_in_show_startup():
-    """show_startup prints 'online · {provider} · cloud' for cloud providers."""
+    """show_startup prints 'versatile · {provider} · cloud' for cloud providers."""
     from rich.console import Console
     from io import StringIO
     from unittest.mock import patch as _patch
@@ -100,7 +103,7 @@ def test_cloud_tagline_in_show_startup():
          _patch("ui.startup._check_index", return_value=False):
         su.show_startup(con, "openai:gpt-4o")
     output = buf.getvalue()
-    assert "online" in output
+    assert "versatile" in output
     assert "openai" in output
     assert "cloud" in output
     assert "offline" not in output
