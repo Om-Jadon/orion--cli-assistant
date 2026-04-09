@@ -43,13 +43,14 @@ def build_agent(think: bool = False) -> Agent:
         agent = Agent(
             MODEL_STRING,
             system_prompt=_build_system_prompt(),
+            model_settings={"parallel_tool_calls": False},
         )
 
-    from tools.files import manage_files
+    from tools.files import find_files, list_directory, read_file, open_file, move_file, delete_file
     from tools.shell import run_shell
     from tools.browser import open_url
 
-    for tool in [manage_files, run_shell, open_url]:
+    for tool in [find_files, list_directory, read_file, open_file, move_file, delete_file, run_shell, open_url]:
         agent.tool_plain(tool)
 
     return agent
@@ -67,12 +68,22 @@ ENVIRONMENT:
 - Home: {home}
 - OS: Linux
 
+TOOLS:
+- find_files(query) — locate files by name
+- list_directory(path) — list folder contents; use '~' for home
+- read_file(path) — read file contents
+- open_file(path) — open in default app
+- move_file(source, destination) — move or rename
+- delete_file(path) — trash a file
+- run_shell(command) — run any shell command
+- open_url(url) — open a URL in the browser
+
 RULES:
 - Answer factual, conversational, and knowledge questions DIRECTLY — do NOT call any tools.
-- Only use tools when the user explicitly asks to: access files, run a command, or open a URL.
-- Never guess file paths. Use manage_files(action="find") to locate files before operating on them.
-- For destructive operations (delete, overwrite), always confirm with the user first.
-- Never run sudo commands. Never touch paths outside {home}.
-- Be concise. No padding. No "As an AI..." disclaimers.
+- Only call tools when the task requires filesystem access, shell execution, or opening a URL.
+- Always use find_files first to locate a file before reading, opening, or deleting it.
+- For destructive operations (delete, overwrite), confirm with the user first.
+- Never run sudo. Never touch paths outside {home}.
+- Be concise. No "As an AI..." disclaimers.
 - Respond in plain Markdown. No HTML.
 """

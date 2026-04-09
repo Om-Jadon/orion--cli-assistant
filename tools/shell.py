@@ -7,7 +7,7 @@ TIMEOUT = 30
 async def run_shell(command: str) -> str:
     """
     Execute a shell command safely.
-    Use manage_files for file operations — this is for everything else.
+    Use file tools (find_files, read_file, etc.) for file operations — this is for everything else.
     Blocked: sudo, rm -rf, writes outside home.
     """
     blocked, reason = validate_sudo(command)
