@@ -1,7 +1,10 @@
+import os
+import sys
 import httpx
 from rich.console import Console
 from rich.text import Text
-from config import OLLAMA_API_BASE, DB_PATH
+from config import OLLAMA_API_BASE, DB_PATH, PROVIDER, CLOUD_API_KEY_VARS
+
 
 def show_startup(console: Console, model: str):
     console.clear()
@@ -14,20 +17,53 @@ def show_startup(console: Console, model: str):
     console.print()
     console.print(wordmark)
     console.print("  [#6C7086]" + "─" * 40 + "[/#6C7086]")
-    console.print("  [#6C7086]offline · local · private[/#6C7086]")
+
+    if PROVIDER == "ollama":
+        console.print("  [#6C7086]offline · local · private[/#6C7086]")
+    else:
+        console.print(f"  [#6C7086]online · {PROVIDER} · cloud[/#6C7086]")
+
     console.print()
 
-    checks = [
-        ("ollama", _check_ollama()),
-        ("memory", _check_db()),
-        ("index",  _check_index()),
-    ]
+    if PROVIDER == "ollama":
+        checks = [
+            ("ollama", _check_ollama()),
+            ("memory", _check_db()),
+            ("index",  _check_index()),
+        ]
+    else:
+        checks = [
+            (PROVIDER,  _check_api_key(PROVIDER)),
+            ("memory",  _check_db()),
+            ("index",   _check_index()),
+        ]
 
     for name, ok in checks:
         dot = "[#A6E3A1]●[/#A6E3A1]" if ok else "[#F38BA8]●[/#F38BA8]"
         console.print(f"  {dot} [#6C7086]{name}[/#6C7086]")
 
     console.print()
+
+
+def _check_api_key(provider: str) -> bool:
+    """
+    Check that the required API key env var is set for the given cloud provider.
+    Prints a clear error to stderr and exits with code 1 if the key is missing.
+    Returns True when the key is present (used as the startup check result).
+    """
+    env_var = CLOUD_API_KEY_VARS.get(provider, "")
+    if not env_var:
+        return True  # unknown provider — let PydanticAI surface the error at inference time
+    if os.environ.get(env_var):
+        return True
+    print(
+        f"\nError: {env_var} is not set.\n"
+        f"Export it in your shell before starting orion:\n\n"
+        f"  export {env_var}=<your-key>\n",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
 
 def _check_ollama() -> bool:
     try:
@@ -36,8 +72,10 @@ def _check_ollama() -> bool:
     except Exception:
         return False
 
+
 def _check_db() -> bool:
     return DB_PATH.exists()
+
 
 def _check_index() -> bool:
     if not DB_PATH.exists():
@@ -51,14 +89,18 @@ def _check_index() -> bool:
     except Exception:
         return False
 
+
 async def prewarm_model(model: str):
-    """Pre-load the model so first real query has no cold-start delay."""
+    """Pre-load the Ollama model to avoid cold-start on first query.
+    No-op for cloud providers."""
+    if PROVIDER != "ollama":
+        return
     try:
         async with httpx.AsyncClient() as client:
             await client.post(
                 f"{OLLAMA_API_BASE}/api/generate",
                 json={"model": model, "prompt": "", "keep_alive": "10m"},
-                timeout=30
+                timeout=30,
             )
     except Exception:
-        pass  # non-fatal — just means first query will be slower
+        pass  # non-fatal — first query will be slightly slower
