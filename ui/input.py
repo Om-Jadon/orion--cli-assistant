@@ -25,8 +25,8 @@ def build_session() -> PromptSession:
         enable_open_in_editor=True,
     )
 
-def get_prompt_text(model: str = "qwen3:4b") -> HTML:
-    return HTML(f'<ansibrightblack>{model}</ansibrightblack> <ansiblue>❯</ansiblue> ')
+def get_prompt_text() -> HTML:
+    return HTML('<ansiblue>❯❯❯</ansiblue> ')
 
-async def get_input(session: PromptSession, model: str) -> str:
-    return await session.prompt_async(get_prompt_text(model))
+async def get_input(session: PromptSession, model: str = "") -> str:
+    return await session.prompt_async(get_prompt_text())

@@ -47,11 +47,9 @@ def build_agent(think: bool = False) -> Agent:
 
     from tools.files import manage_files
     from tools.shell import run_shell
-    from tools.browser import open_url, fetch_page
-    from tools.search import web_search
-    from tools.media import open_media
+    from tools.browser import open_url
 
-    for tool in [manage_files, run_shell, open_url, fetch_page, web_search, open_media]:
+    for tool in [manage_files, run_shell, open_url]:
         agent.tool_plain(tool)
 
     return agent
@@ -70,10 +68,11 @@ ENVIRONMENT:
 - OS: Linux
 
 RULES:
-- Never guess file paths. Always call manage_files(action="find") first to locate files.
+- Answer factual, conversational, and knowledge questions DIRECTLY — do NOT call any tools.
+- Only use tools when the user explicitly asks to: access files, run a command, or open a URL.
+- Never guess file paths. Use manage_files(action="find") to locate files before operating on them.
 - For destructive operations (delete, overwrite), always confirm with the user first.
 - Never run sudo commands. Never touch paths outside {home}.
 - Be concise. No padding. No "As an AI..." disclaimers.
 - Respond in plain Markdown. No HTML.
-- When opening media or YouTube content, use open_media — not a raw URL.
 """

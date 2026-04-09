@@ -2,23 +2,24 @@ import os
 import shutil
 import subprocess
 from pathlib import Path
+from typing import Literal, Optional
 from safety.boundaries import validate_path
 
 HOME = Path.home()
 
 
 async def manage_files(
-    action: str,
-    path: str = "",
-    destination: str = "",
-    query: str = "",
+    action: Literal["find", "list", "open", "read", "move", "rename", "delete", "create"],
+    path: Optional[str] = None,
+    destination: Optional[str] = None,
+    query: Optional[str] = None,
 ) -> str:
     """
     Unified file management. Actions: find | list | open | read | move | rename | delete | create.
     Always call action='find' first to locate a file before operating on it.
     """
     if action == "find":
-        return _find_files(query or path)
+        return _find_files(query or path or "")
 
     if action == "list":
         target = Path(path) if path else HOME
@@ -85,7 +86,7 @@ async def manage_files(
         if not ok:
             return resolved
         p = Path(resolved)
-        if path.endswith("/"):
+        if path and path.endswith("/"):
             p.mkdir(parents=True, exist_ok=True)
             return f"Created folder: {resolved}"
         else:

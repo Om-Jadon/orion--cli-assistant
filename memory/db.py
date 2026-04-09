@@ -58,7 +58,7 @@ def _run_migrations(conn: sqlite3.Connection):
         );
 
         CREATE VIRTUAL TABLE IF NOT EXISTS vec_memory USING vec0(
-            embedding float[256]
+            embedding float[384]
         );
 
         CREATE TABLE IF NOT EXISTS vec_meta (

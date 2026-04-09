@@ -16,7 +16,7 @@ CONFIG_FILE = (
 )
 
 _defaults = {
-    "model": "gemma4:latest",
+    "model": "qwen3:1.7b",
     "theme": "mocha",
     "max_width": 100,
 }
@@ -72,8 +72,8 @@ THINK_OFF = {"think": False}   # passed with every request; /think toggles think
 
 OLLAMA_BASE        = "http://localhost:11434/v1"   # OpenAI-compatible endpoint (used by openai SDK)
 OLLAMA_API_BASE    = "http://localhost:11434"       # Native Ollama API (used for embeddings, tags, generate)
-EMBED_MODEL        = "nomic-embed-text"
-EMBED_DIM          = 256   # Matryoshka truncation of nomic-embed-text's 768-dim output
+EMBED_MODEL        = "BAAI/bge-small-en-v1.5"  # fastembed local model, no Ollama needed
+EMBED_DIM          = 384   # bge-small-en-v1.5 output dimension
 
 KEEP_ALIVE_ACTIVE  = "10m"
 KEEP_ALIVE_IDLE    = "2m"

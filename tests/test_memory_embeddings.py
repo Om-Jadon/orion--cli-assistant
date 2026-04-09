@@ -4,62 +4,24 @@ from unittest.mock import AsyncMock, patch, MagicMock
 
 
 @pytest.mark.asyncio
-async def test_embed_truncates_to_dim():
-    """Test that embed() truncates a 768-dim vector to EMBED_DIM (256)."""
-    # Create a mock full vector of 768 dimensions (typical for nomic-embed-text)
-    full_vector = list(range(768))  # [0, 1, 2, ..., 767]
+async def test_embed_returns_correct_dim():
+    """Test that embed() returns a vector of EMBED_DIM length."""
+    import numpy as np
+    from config import EMBED_DIM
 
-    # Mock the httpx.AsyncClient.post method
-    mock_response = MagicMock()
-    mock_response.json.return_value = {"embedding": full_vector}
+    fake_vector = np.array([0.1] * EMBED_DIM)
 
-    with patch("httpx.AsyncClient") as mock_client_class:
-        mock_client = AsyncMock()
-        mock_client.__aenter__.return_value = mock_client
-        mock_client.__aexit__.return_value = None
-        mock_client.post = AsyncMock(return_value=mock_response)
-        mock_client_class.return_value = mock_client
+    with patch("memory.embeddings._get_model") as mock_get_model:
+        mock_model = MagicMock()
+        mock_model.embed.return_value = iter([fake_vector])
+        mock_get_model.return_value = mock_model
 
         from memory.embeddings import embed
-        from config import EMBED_DIM
-
         result = await embed("test text")
 
-        # Verify the result is truncated to EMBED_DIM
         assert len(result) == EMBED_DIM
-        # Verify it matches the first EMBED_DIM elements
-        assert result == full_vector[:EMBED_DIM]
-
-        # Verify the HTTP call was made correctly
-        mock_client.post.assert_called_once()
-        call_args = mock_client.post.call_args
-        assert "api/embeddings" in call_args.args[0]
-        assert call_args.kwargs["json"]["prompt"] == "test text"
-
-
-@pytest.mark.asyncio
-async def test_embed_passes_model_and_prompt():
-    """Test that embed() passes the correct model and prompt to Ollama."""
-    mock_response = MagicMock()
-    mock_response.json.return_value = {"embedding": [0.1, 0.2, 0.3]}
-
-    with patch("httpx.AsyncClient") as mock_client_class:
-        mock_client = AsyncMock()
-        mock_client.__aenter__.return_value = mock_client
-        mock_client.__aexit__.return_value = None
-        mock_client.post = AsyncMock(return_value=mock_response)
-        mock_client_class.return_value = mock_client
-
-        from memory.embeddings import embed
-        from config import EMBED_MODEL
-
-        await embed("hello world")
-
-        # Verify the API call
-        call_kwargs = mock_client.post.call_args.kwargs
-        assert call_kwargs["json"]["model"] == EMBED_MODEL
-        assert call_kwargs["json"]["prompt"] == "hello world"
-        assert call_kwargs["timeout"] == 10
+        assert isinstance(result, list)
+        assert isinstance(result[0], float)
 
 
 def test_serialize_produces_correct_bytes():

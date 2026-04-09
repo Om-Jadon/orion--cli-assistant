@@ -21,7 +21,7 @@ def make_in_memory_conn() -> sqlite3.Connection:
         );
 
         CREATE VIRTUAL TABLE IF NOT EXISTS vec_memory USING vec0(
-            embedding float[256]
+            embedding float[384]
         );
 
         CREATE TABLE IF NOT EXISTS vec_meta (
@@ -61,7 +61,7 @@ async def test_hybrid_search_returns_results():
         "INSERT INTO memory_fts (rowid, content, key, source) VALUES (1, 'the quick brown fox', 'key1', 'test')"
     )
 
-    # Build a 256-dim vector and insert into vec_memory
+    # Build a 384-dim vector and insert into vec_memory
     test_vector = [0.1] * EMBED_DIM
     serialized = serialize(test_vector)
     conn.execute(

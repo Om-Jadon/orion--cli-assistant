@@ -14,8 +14,8 @@ def test_paths_are_under_home():
 
 def test_default_model():
     import config
-    assert config.MODEL == "gemma4:latest"
-    assert config.EMBED_MODEL == "nomic-embed-text"
+    assert config.MODEL == "qwen3:1.7b"
+    assert config.EMBED_MODEL == "BAAI/bge-small-en-v1.5"
 
 
 def test_think_off_is_dict():
@@ -39,10 +39,8 @@ def test_ollama_urls():
 
 def test_embed_dim():
     import config
-    # nomic-embed-text natively outputs 768-dim vectors.
-    # We intentionally truncate to 256 via Matryoshka truncation in
-    # memory/embeddings.py (Stage 4). This constant must stay 256.
-    assert config.EMBED_DIM == 256
+    # bge-small-en-v1.5 outputs 384-dim vectors (fastembed, no Ollama required)
+    assert config.EMBED_DIM == 384
 
 
 def test_keep_alive_values_are_strings():
@@ -66,13 +64,13 @@ def test_toml_override_updates_public_constants(tmp_path):
     Uses importlib.reload to re-execute module-level code with a patched CONFIG_FILE.
     """
     toml_file = tmp_path / "config.toml"
-    toml_file.write_text('model = "gemma4:latest"\nmax_width = 80\n')
+    toml_file.write_text('model = "qwen3:1.7b"\nmax_width = 80\n')
 
     import config as cfg
     try:
         with patch.object(cfg, "CONFIG_FILE", toml_file):
             importlib.reload(cfg)
-            assert cfg.MODEL == "gemma4:latest"
+            assert cfg.MODEL == "qwen3:1.7b"
             assert cfg.MAX_WIDTH == 80
     finally:
         # Restore defaults — other tests in this process need clean module state
@@ -85,7 +83,7 @@ def test_toml_missing_returns_defaults(tmp_path):
     try:
         with patch.object(cfg, "CONFIG_FILE", tmp_path / "nonexistent.toml"):
             importlib.reload(cfg)
-            assert cfg.MODEL == "gemma4:latest"
+            assert cfg.MODEL == "qwen3:1.7b"
             assert cfg.THEME == "mocha"
             assert cfg.MAX_WIDTH == 100
     finally:

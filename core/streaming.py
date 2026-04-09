@@ -19,8 +19,9 @@ async def run_with_streaming(agent: Agent, prompt: str, context: str = "") -> st
 
     try:
         async with agent.run_stream(full_prompt) as result:
+            await spinner.stop()
+
             async def live_tokens() -> AsyncGenerator[str, None]:
-                await spinner.stop()
                 async for delta in result.stream_text(delta=True):
                     yield delta
 
