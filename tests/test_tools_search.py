@@ -42,8 +42,7 @@ async def test_web_search_offline():
 async def test_web_search_raw_returns_list():
     mock_ddgs = MagicMock()
     mock_ddgs.text.return_value = MOCK_RESULTS
-    with patch("tools.search._is_online", return_value=True), \
-         patch("tools.search.DDGS", return_value=mock_ddgs):
+    with patch("tools.search.DDGS", return_value=mock_ddgs):
         result = await web_search_raw("python tutorials")
     assert isinstance(result, list)
     assert len(result) == 2
