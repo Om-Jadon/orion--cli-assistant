@@ -1,6 +1,23 @@
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 import main
+
+
+def test_main_uses_shared_runtime_state():
+    assert hasattr(main, "state")
+    assert hasattr(main.state, "agent")
+    assert hasattr(main.state, "think_mode")
+    assert hasattr(main.state, "session_id")
+
+
+@pytest.mark.asyncio
+async def test_handle_slash_delegates_to_slash_module():
+    with patch("main.slash.handle_slash", new=AsyncMock()) as mock_handle:
+        await main.handle_slash("/help")
+    mock_handle.assert_awaited_once()
+    kwargs = mock_handle.await_args.kwargs
+    assert kwargs["state"] is main.state
+    assert kwargs["conn"] is main.conn
 
 
 @pytest.mark.asyncio
@@ -11,6 +28,10 @@ async def test_help_prints_output():
         await main.handle_slash("/help")
     assert any("/think" in str(line) for line in printed)
     assert any("/clear" in str(line) for line in printed)
+    assert any("/undo" in str(line) for line in printed)
+    assert any("/history" in str(line) for line in printed)
+    assert any("/memory" in str(line) for line in printed)
+    assert any("/scan" in str(line) for line in printed)
 
 
 @pytest.mark.asyncio
@@ -32,6 +53,10 @@ async def test_help_lists_all_commands():
     assert "/help" in all_text
     assert "/think" in all_text
     assert "/clear" in all_text
+    assert "/undo" in all_text
+    assert "/history" in all_text
+    assert "/memory" in all_text
+    assert "/scan" in all_text
     assert "/exit" in all_text
 
 
@@ -45,23 +70,82 @@ async def test_help_case_insensitive():
 
 
 @pytest.mark.asyncio
-async def test_clear_resets_session_id():
-    original_id = main.session_id
+async def test_clear_clears_terminal():
+    with patch("main.console") as mock_console:
+        await main.handle_slash("/clear")
+    mock_console.clear.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_undo_dispatches_to_helper():
+    with patch("main.slash.undo_last_operation", new=AsyncMock()) as mock_undo:
+        await main.handle_slash("/undo")
+    mock_undo.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_history_dispatches_to_helper():
+    with patch("main.slash.show_history") as mock_history:
+        await main.handle_slash("/history")
+    mock_history.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_memory_dispatches_to_helper():
+    with patch("main.slash.show_memory") as mock_memory:
+        await main.handle_slash("/memory")
+    mock_memory.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_scan_runs_indexer():
+    with patch("main.slash.asyncio.to_thread", new=AsyncMock()) as mock_to_thread:
+        await main.handle_slash("/scan")
+    assert mock_to_thread.await_count == 1
+
+
+@pytest.mark.asyncio
+async def test_exit_raises_system_exit():
+    with pytest.raises(SystemExit):
+        await main.handle_slash("/exit")
+
+
+@pytest.mark.asyncio
+async def test_undo_no_last_operation_prints_message():
     printed = []
-    try:
-        with patch("main.console") as mock_console:
-            mock_console.print = lambda *a, **kw: printed.append(a[0] if a else "")
-            await main.handle_slash("/clear")
-        assert main.session_id != original_id
-        assert any("cleared" in str(line).lower() for line in printed)
-    finally:
-        main.session_id = original_id
+    with patch("main.slash.get_last_operation", return_value=None), \
+         patch("main.console") as mock_console:
+        mock_console.print = lambda *a, **kw: printed.append(a[0] if a else "")
+        await main.slash.undo_last_operation(main.conn, main.console)
+    assert any("nothing to undo" in str(line).lower() for line in printed)
+
+
+@pytest.mark.asyncio
+async def test_undo_move_reverses_destination_to_source():
+    op = {"operation": "move", "source": "/tmp/source.txt", "destination": "/tmp/dest.txt"}
+    with patch("main.slash.get_last_operation", return_value=op), \
+         patch("main.slash.Path.exists", return_value=True), \
+         patch("main.slash._shutil.move") as mock_move:
+        await main.slash.undo_last_operation(main.conn, main.console)
+    mock_move.assert_called_once_with("/tmp/dest.txt", "/tmp/source.txt")
+
+
+@pytest.mark.asyncio
+async def test_undo_delete_prints_restore_hint():
+    op = {"operation": "delete", "source": "/tmp/source.txt", "destination": "trash"}
+    printed = []
+    with patch("main.slash.get_last_operation", return_value=op), \
+         patch("main.console") as mock_console:
+        mock_console.print = lambda *a, **kw: printed.append(a[0] if a else "")
+        await main.slash.undo_last_operation(main.conn, main.console)
+    assert any("trash" in str(line).lower() for line in printed)
 
 
 @pytest.mark.asyncio
 async def test_think_toggles_mode_on():
-    original_agent = main.agent
-    main.think_mode = False
+    original_agent = main.state.agent
+    original_think = main.state.think_mode
+    main.state.think_mode = False
     printed = []
     try:
         with patch("main.console") as mock_console, \
@@ -70,19 +154,20 @@ async def test_think_toggles_mode_on():
             new_agent = MagicMock()
             mock_build.return_value = new_agent
             await main.handle_slash("/think")
-        assert main.think_mode is True
+        assert main.state.think_mode is True
         mock_build.assert_called_once_with(think=True)
-        assert main.agent is new_agent
+        assert main.state.agent is new_agent
         assert any("on" in str(line).lower() for line in printed)
     finally:
-        main.think_mode = False
-        main.agent = original_agent
+        main.state.think_mode = original_think
+        main.state.agent = original_agent
 
 
 @pytest.mark.asyncio
 async def test_think_toggles_mode_off():
-    original_agent = main.agent
-    main.think_mode = True
+    original_agent = main.state.agent
+    original_think = main.state.think_mode
+    main.state.think_mode = True
     printed = []
     try:
         with patch("main.console") as mock_console, \
@@ -91,10 +176,10 @@ async def test_think_toggles_mode_off():
             new_agent = MagicMock()
             mock_build.return_value = new_agent
             await main.handle_slash("/think")
-        assert main.think_mode is False
+        assert main.state.think_mode is False
         mock_build.assert_called_once_with(think=False)
-        assert main.agent is new_agent
+        assert main.state.agent is new_agent
         assert any("off" in str(line).lower() for line in printed)
     finally:
-        main.think_mode = False
-        main.agent = original_agent
+        main.state.think_mode = original_think
+        main.state.agent = original_agent

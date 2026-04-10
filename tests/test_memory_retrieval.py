@@ -1,6 +1,7 @@
 import sqlite3
 import sqlite_vec
 import pytest
+from unittest.mock import MagicMock
 from unittest.mock import AsyncMock, patch
 
 from memory.embeddings import serialize
@@ -69,3 +70,21 @@ async def test_hybrid_search_returns_results():
     assert results[0]["source"] == "test"
 
     conn.close()
+
+
+@pytest.mark.asyncio
+async def test_hybrid_search_logs_debug_for_fts_and_vec_errors():
+    from memory.retrieval import hybrid_search
+
+    conn = MagicMock()
+    conn.execute.side_effect = [
+        sqlite3.OperationalError("fts failed"),
+        Exception("vec failed"),
+    ]
+
+    with patch("memory.retrieval.embed", new=AsyncMock(return_value=[0.1] * EMBED_DIM)), \
+         patch("memory.retrieval.logger.debug") as mock_debug:
+        results = await hybrid_search(conn, "query", k=5)
+
+    assert results == []
+    assert mock_debug.call_count >= 2

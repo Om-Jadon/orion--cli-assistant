@@ -50,6 +50,24 @@ async def test_prewarm_model_swallows_errors():
         await prewarm_model("qwen3:4b")  # should not raise
 
 
+@pytest.mark.asyncio
+async def test_prewarm_model_logs_debug_on_error():
+    import ui.startup as su
+
+    with patch.object(su, "PROVIDER", "ollama"), \
+         patch("httpx.AsyncClient") as mock_client_cls:
+        mock_client = MagicMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_client.post = AsyncMock(side_effect=httpx.ConnectError("refused"))
+        mock_client_cls.return_value = mock_client
+
+        with patch("ui.startup.logger.debug") as mock_debug:
+            await su.prewarm_model("qwen3:4b")
+
+    mock_debug.assert_called_once()
+
+
 def test_check_api_key_passes_when_env_var_set():
     """_check_api_key returns True when the env var is present."""
     import os

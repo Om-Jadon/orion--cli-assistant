@@ -1,25 +1,40 @@
 import asyncio
+import logging
 import sys
 import uuid
 from ui.renderer import console, print_user, print_separator
 from ui.input import build_session, get_input
 from ui.startup import show_startup, prewarm_model
+from ui import slash
 from core.agent import build_agent
 from core.streaming import run_with_streaming
 from core.context import build_context
 from memory.db import get_connection
 from memory.store import save_turn
 from memory.extractor import extract_and_store
-from config import MODEL, MODEL_STRING
+from config import MODEL, MODEL_STRING, ORION_DIR
+from tools import files as file_tools
 
-think_mode = False
-agent = build_agent(think=think_mode)
-session_id = str(uuid.uuid4())
+ORION_DIR.mkdir(parents=True, exist_ok=True)
+logging.basicConfig(level=logging.DEBUG, filename=str(ORION_DIR / "debug.log"))
+
+state = slash.RuntimeState(
+    agent=build_agent(think=False),
+    think_mode=False,
+    session_id=str(uuid.uuid4()),
+)
 conn = get_connection()
+file_tools.set_connection(conn)
 
 
 async def main():
-    global agent, think_mode
+    if "--init" in sys.argv:
+        from memory.indexer import scan_home
+
+        console.print("[accent]Building file index...[/accent]")
+        await asyncio.to_thread(scan_home, conn, True)
+        console.print("[success]Done.[/success]")
+        return
 
     # One-shot: orion open the latest markiplier video
     if len(sys.argv) > 1 and sys.stdin.isatty():
@@ -32,15 +47,8 @@ async def main():
         piped_input = sys.stdin.read()
         user_query = sys.argv[1] if len(sys.argv) > 1 else "Analyze this:"
         full_query = f"{user_query}\n\n```\n{piped_input[:4000]}\n```"
-        response = await run_with_streaming(agent, full_query)
+        response = await run_with_streaming(state.agent, full_query)
         print(response)
-        return
-
-    if "--init" in sys.argv:
-        from memory.indexer import scan_home
-        console.print("[accent]Building file index...[/accent]")
-        await asyncio.to_thread(scan_home, conn, True)
-        console.print("[success]Done.[/success]")
         return
 
     display_model = MODEL_STRING or MODEL
@@ -54,15 +62,16 @@ async def main():
     while True:
         try:
             user_input = await get_input(session)
-            if not user_input.strip():
+            stripped = user_input.strip()
+            if not stripped:
                 continue
-            if user_input.strip() in ("/exit", "/quit", "exit", "quit"):
+            if stripped in ("exit", "quit"):
                 break
-            if user_input.startswith("/"):
-                await handle_slash(user_input)
+            if stripped.startswith("/"):
+                await handle_slash(stripped)
                 continue
 
-            await run_once(user_input)
+            await run_once(stripped)
 
         except KeyboardInterrupt:
             console.print("\n[#6C7086]Interrupted.[/#6C7086]")
@@ -73,44 +82,26 @@ async def main():
 async def run_once(query: str):
     print_user(query)
 
-    save_turn(conn, session_id, "user", query)
+    save_turn(conn, state.session_id, "user", query)
     extract_and_store(conn, query)
 
-    context = await build_context(conn, query, session_id)
-    response = await run_with_streaming(agent, query, context=context)
+    context = await build_context(conn, query, state.session_id)
+    response = await run_with_streaming(state.agent, query, context=context)
 
     if response:
-        save_turn(conn, session_id, "assistant", response)
+        save_turn(conn, state.session_id, "assistant", response)
 
     print_separator()
 
 
 async def handle_slash(cmd: str):
-    parts = cmd.strip().split()
-    command = parts[0].lower()
-
-    if command == "/help":
-        console.print()
-        console.print("  [accent]Slash commands[/accent]")
-        console.print()
-        console.print("  [dim]/help[/dim]       show this message")
-        console.print("  [dim]/think[/dim]      toggle chain-of-thought reasoning")
-        console.print("  [dim]/clear[/dim]      clear conversation history")
-        console.print("  [dim]/exit[/dim]       quit orion")
-        console.print()
-    elif command == "/clear":
-        global session_id
-        session_id = str(uuid.uuid4())
-        console.print("[success]Conversation cleared.[/success]")
-    elif command == "/think":
-        global think_mode, agent
-        think_mode = not think_mode
-        agent = build_agent(think=think_mode)
-        state = "on" if think_mode else "off"
-        tag = "success" if think_mode else "warning"
-        console.print(f"[{tag}]Think mode {state}.[/{tag}]")
-    else:
-        console.print(f"[error]Unknown command:[/error] {cmd}. Type /help for available commands.")
+    await slash.handle_slash(
+        cmd,
+        state=state,
+        conn=conn,
+        console=console,
+        build_agent=build_agent,
+    )
 
 
 if __name__ == "__main__":

@@ -1,10 +1,35 @@
+import asyncio
+import logging
+import sqlite3
 import shutil
 import subprocess
 from pathlib import Path
+from config import HOME
 from safety.boundaries import validate_path
 from safety import confirm
 
-HOME = Path.home()
+logger = logging.getLogger(__name__)
+_operation_conn = None
+_search_conn = None
+
+
+def set_connection(conn):
+    global _operation_conn, _search_conn
+    _operation_conn = conn
+    _search_conn = conn
+
+
+def _log_operation(operation: str, source: str, destination: str):
+    """Best-effort operation logging used by /undo command."""
+    global _operation_conn
+    try:
+        if _operation_conn is None:
+            from memory.db import get_connection
+            _operation_conn = get_connection()
+        from memory.store import log_operation
+        log_operation(_operation_conn, operation, source, destination)
+    except Exception:
+        pass
 
 
 async def find_files(query: str) -> str:
@@ -16,11 +41,29 @@ async def find_files(query: str) -> str:
     """
     if not query:
         return "Provide a filename or search term."
+
+    if _search_conn is not None:
+        try:
+            pattern = f"%{query}%"
+            rows = _search_conn.execute(
+                """SELECT path FROM files
+                   WHERE name LIKE ? OR tags LIKE ?
+                   LIMIT 10""",
+                (pattern, pattern),
+            ).fetchall()
+            indexed = [row["path"] if isinstance(row, sqlite3.Row) else row[0] for row in rows]
+            if indexed:
+                return "\n".join(indexed)
+        except sqlite3.Error as e:
+            logger.debug("find_files index query failed: %s", e)
+
     try:
-        out = subprocess.run(
-            ["find", str(HOME), "-iname", f"*{query}*",
-             "-not", "-path", "*/.*", "-maxdepth", "8"],
-            capture_output=True, text=True, timeout=5
+        out = await asyncio.to_thread(
+            subprocess.run,
+            ["find", str(HOME), "-iname", f"*{query}*", "-not", "-path", "*/.*", "-maxdepth", "8"],
+            capture_output=True,
+            text=True,
+            timeout=5,
         )
         results = [r for r in out.stdout.strip().split("\n") if r][:10]
     except subprocess.TimeoutExpired:
@@ -43,7 +86,10 @@ async def list_directory(path: str) -> str:
     if not p.is_dir():
         return f"Not a directory: {resolved}"
     items = sorted(p.iterdir())
-    return "\n".join(str(i) for i in items[:50])
+    shown = "\n".join(str(i) for i in items[:50])
+    if len(items) > 50:
+        shown += f"\n(showing 50 of {len(items)})"
+    return shown
 
 
 async def read_file(path: str) -> str:
@@ -93,8 +139,9 @@ async def move_file(source: str, destination: str) -> str:
     if not ok:
         return dst
     try:
-        shutil.move(src, dst)
-        return f"Moved {Path(src).name} → {dst}"
+        moved_to = shutil.move(src, dst)
+        _log_operation("move", src, str(moved_to))
+        return f"Moved {Path(src).name} → {moved_to}"
     except Exception as e:
         return f"Error moving file: {e}"
 
@@ -109,8 +156,11 @@ async def delete_file(path: str) -> str:
     ok, resolved = validate_path(path)
     if not ok:
         return resolved
+    if not Path(resolved).exists():
+        return f"Not found: {path}."
     confirmed = await confirm.ask_confirmation(f"Move to trash: {Path(resolved).name}?")
     if not confirmed:
         return "Cancelled."
-    subprocess.run(["gio", "trash", resolved])
+    await asyncio.to_thread(subprocess.run, ["gio", "trash", resolved])
+    _log_operation("delete", resolved, "trash")
     return f"Moved to trash: {Path(resolved).name}"

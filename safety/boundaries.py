@@ -1,7 +1,6 @@
 import shlex
 from pathlib import Path
-
-HOME = Path.home()
+from config import HOME
 
 BLOCKED_COMMANDS = ["sudo", "su", "pkexec", "doas"]
 

@@ -52,6 +52,16 @@ async def test_fetch_page_fetch_error():
     mock_fallback.assert_awaited_once_with("https://example.com")
 
 
+async def test_fetch_page_logs_debug_on_tier1_error():
+    with patch("tools.browser._is_online", return_value=True), \
+         patch("trafilatura.fetch_url", side_effect=Exception("Network error")), \
+         patch("tools.browser._playwright_extract", new=AsyncMock(return_value="Fallback content")), \
+         patch("tools.browser.logger.debug") as mock_debug:
+        await fetch_page("https://example.com")
+
+    mock_debug.assert_called_once()
+
+
 async def test_fetch_page_falls_back_when_tier1_too_short():
     with patch("tools.browser._is_online", return_value=True), \
          patch("trafilatura.fetch_url", return_value="<html>...</html>"), \

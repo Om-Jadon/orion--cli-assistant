@@ -1,7 +1,9 @@
+import logging
 import sqlite3
 from memory.embeddings import embed, serialize
 
 MIN_RRF_SCORE = 0.01  # minimum combined RRF score to include a result
+logger = logging.getLogger(__name__)
 
 def _fts_escape(query: str) -> str:
     """Wrap query in double quotes for FTS5 to treat it as a phrase, escaping internal quotes."""
@@ -17,7 +19,8 @@ async def hybrid_search(conn: sqlite3.Connection, query: str, k: int = 5) -> lis
                ORDER BY score ASC LIMIT 20""",
             (_fts_escape(query),)
         ).fetchall()
-    except sqlite3.OperationalError:
+    except sqlite3.OperationalError as e:
+        logger.debug("FTS query failed: %s", e)
         fts_results = []
 
     try:
@@ -28,7 +31,8 @@ async def hybrid_search(conn: sqlite3.Connection, query: str, k: int = 5) -> lis
                ORDER BY distance LIMIT 20""",
             (sqlite3.Binary(serialize(query_vec)),)
         ).fetchall()
-    except Exception:
+    except Exception as e:
+        logger.debug("Vector query failed: %s", e)
         vec_results = []
 
     rrf_scores: dict[int, float] = {}

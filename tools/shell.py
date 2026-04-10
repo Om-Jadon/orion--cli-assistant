@@ -1,3 +1,5 @@
+import asyncio
+from pathlib import Path
 import subprocess
 from safety.boundaries import validate_sudo
 
@@ -18,11 +20,14 @@ async def run_shell(command: str) -> str:
         return f"Blocked: {reason}"
 
     try:
-        result = subprocess.run(
-            command, shell=True,
-            capture_output=True, text=True,
+        result = await asyncio.to_thread(
+            subprocess.run,
+            command,
+            shell=True,
+            capture_output=True,
+            text=True,
             timeout=TIMEOUT,
-            cwd=str(__import__("pathlib").Path.home())
+            cwd=str(Path.home()),
         )
         output = (result.stdout + result.stderr).strip()
         return output[:3000] if output else "(no output)"

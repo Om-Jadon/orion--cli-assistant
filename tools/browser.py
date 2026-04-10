@@ -1,3 +1,4 @@
+import logging
 import subprocess
 import socket
 from pathlib import Path
@@ -7,6 +8,7 @@ from safety.boundaries import validate_path
 
 MAX_EXTRACT_CHARS = 6000
 MIN_EXTRACT_CHARS = 10
+logger = logging.getLogger(__name__)
 
 
 async def open_url(url: str) -> str:
@@ -47,8 +49,8 @@ async def fetch_page(url: str) -> str:
         text = trafilatura.extract(downloaded)
         if text and len(text) >= MIN_EXTRACT_CHARS:
             return text[:MAX_EXTRACT_CHARS]
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug("fetch_page error: %s", e)
 
     # Tier 2: JS-rendered fallback
     return await _playwright_extract(url)

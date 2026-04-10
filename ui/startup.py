@@ -1,3 +1,4 @@
+import logging
 import os
 import sys
 import httpx
@@ -8,6 +9,7 @@ from config import OLLAMA_API_BASE, DB_PATH, PROVIDER, CLOUD_API_KEY_VARS
 
 
 _STATUS_NAME_WIDTH = 10  # column width for status label alignment
+logger = logging.getLogger(__name__)
 
 
 def show_startup(console: Console, model: str):
@@ -128,5 +130,5 @@ async def prewarm_model(model: str):
                 json={"model": model, "prompt": "", "keep_alive": "10m"},
                 timeout=30,
             )
-    except Exception:
-        pass  # non-fatal — first query will be slightly slower
+    except Exception as e:
+        logger.debug("prewarm failed: %s", e)
