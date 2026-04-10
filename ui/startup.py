@@ -7,6 +7,9 @@ from rich.text import Text
 from config import OLLAMA_API_BASE, DB_PATH, PROVIDER, CLOUD_API_KEY_VARS
 
 
+_STATUS_NAME_WIDTH = 10  # column width for status label alignment
+
+
 def show_startup(console: Console, model: str):
     console.clear()
 
@@ -42,14 +45,14 @@ def show_startup(console: Console, model: str):
         db_ok = _check_db()
         index_ok = _check_index()
         checks = [
-            (PROVIDER, api_ok,   "ready"),
+            (PROVIDER, api_ok,   "ready" if api_ok else "missing"),
             ("memory", db_ok,    "active" if db_ok else "run --init"),
             ("index",  index_ok, f"{_index_count():,} files" if index_ok else "run --init"),
         ]
 
     for name, ok, status_text in checks:
         dot = "[#A6E3A1]●[/#A6E3A1]" if ok else "[#F38BA8]●[/#F38BA8]"
-        console.print(f"  {dot} [#6C7086]{name:<10}[/#6C7086] [#585B70]{status_text}[/#585B70]")
+        console.print(f"  {dot} [#6C7086]{name:<{_STATUS_NAME_WIDTH}}[/#6C7086] [#585B70]{status_text}[/#585B70]")
 
     console.print()
     console.print()
