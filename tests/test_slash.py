@@ -42,3 +42,14 @@ async def test_help_case_insensitive():
         mock_console.print = lambda *a, **kw: printed.append(a[0] if a else "")
         await main.handle_slash("/HELP")
     assert any("/think" in str(line) for line in printed)
+
+
+@pytest.mark.asyncio
+async def test_clear_resets_session_id():
+    original_id = main.session_id
+    printed = []
+    with patch("main.console") as mock_console:
+        mock_console.print = lambda *a, **kw: printed.append(a[0] if a else "")
+        await main.handle_slash("/clear")
+    assert main.session_id != original_id
+    assert any("cleared" in str(line).lower() for line in printed)

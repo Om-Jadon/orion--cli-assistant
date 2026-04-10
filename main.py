@@ -95,6 +95,10 @@ async def handle_slash(cmd: str):
         console.print("  [dim]/clear[/dim]      clear conversation history")
         console.print("  [dim]/exit[/dim]       quit orion")
         console.print()
+    elif command == "/clear":
+        global session_id
+        session_id = str(uuid.uuid4())
+        console.print("[dim]Conversation cleared.[/dim]")
     else:
         console.print(f"[error]Unknown command:[/error] {cmd}. Type /help for available commands.")
 
