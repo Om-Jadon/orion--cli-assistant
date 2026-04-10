@@ -1,3 +1,5 @@
+import asyncio
+
 from duckduckgo_search import DDGS
 from tools.browser import _is_online
 
@@ -10,7 +12,7 @@ async def web_search(query: str, max_results: int = 5) -> str:
     max_results = min(max_results, 10)
 
     try:
-        results = DDGS().text(query, max_results=max_results)
+        results = await asyncio.to_thread(lambda: list(DDGS().text(query, max_results=max_results)))
         if not results:
             return f"No results found for '{query}'"
         lines = []
@@ -28,6 +30,6 @@ async def web_search_raw(query: str, max_results: int = 5) -> list[dict]:
     """Return raw DuckDuckGo search results. Used internally by open_media."""
     max_results = min(max_results, 10)
     try:
-        return DDGS().text(query, max_results=max_results)
+        return await asyncio.to_thread(lambda: list(DDGS().text(query, max_results=max_results)))
     except Exception:
         return []
