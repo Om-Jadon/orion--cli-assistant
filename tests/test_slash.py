@@ -56,3 +56,42 @@ async def test_clear_resets_session_id():
         assert any("cleared" in str(line).lower() for line in printed)
     finally:
         main.session_id = original_id
+
+
+@pytest.mark.asyncio
+async def test_think_toggles_mode_on():
+    main.think_mode = False
+    printed = []
+    try:
+        with patch("main.console") as mock_console, \
+             patch("main.build_agent") as mock_build:
+            mock_console.print = lambda *a, **kw: printed.append(a[0] if a else "")
+            new_agent = MagicMock()
+            mock_build.return_value = new_agent
+            await main.handle_slash("/think")
+        assert main.think_mode is True
+        mock_build.assert_called_once_with(think=True)
+        assert main.agent is new_agent
+        assert any("on" in str(line).lower() for line in printed)
+    finally:
+        main.think_mode = False
+        main.agent = mock_build.return_value  # leave agent as mock; next test resets too
+
+
+@pytest.mark.asyncio
+async def test_think_toggles_mode_off():
+    main.think_mode = True
+    printed = []
+    try:
+        with patch("main.console") as mock_console, \
+             patch("main.build_agent") as mock_build:
+            mock_console.print = lambda *a, **kw: printed.append(a[0] if a else "")
+            new_agent = MagicMock()
+            mock_build.return_value = new_agent
+            await main.handle_slash("/think")
+        assert main.think_mode is False
+        mock_build.assert_called_once_with(think=False)
+        assert main.agent is new_agent
+        assert any("off" in str(line).lower() for line in printed)
+    finally:
+        main.think_mode = False
