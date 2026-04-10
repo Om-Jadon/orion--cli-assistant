@@ -5,7 +5,7 @@ import uuid
 from time import perf_counter
 from ui.renderer import console, print_user, print_separator
 from ui.input import build_session, get_input
-from ui.startup import show_startup, prewarm_model
+from ui.startup import show_startup
 from ui import slash
 from core.agent import build_agent
 from core.streaming import run_with_streaming
@@ -13,7 +13,7 @@ from core.context import build_context
 from memory.db import get_connection
 from memory.store import save_turn
 from memory.extractor import extract_and_store
-from config import MODEL, MODEL_STRING, ORION_DIR
+from config import MODEL_STRING, ORION_DIR
 from config import TRACE_LOG_RETENTION_DAYS
 from core import trace_logging as trace_logging
 from tools import files as file_tools
@@ -24,8 +24,7 @@ logging.basicConfig(level=logging.DEBUG, filename=str(ORION_DIR / "debug.log"))
 trace_logging.initialize()
 
 state = slash.RuntimeState(
-    agent=build_agent(think=False),
-    think_mode=False,
+    agent=build_agent(),
     session_id=str(uuid.uuid4()),
 )
 trace_logging.set_session_id(state.session_id)
@@ -118,9 +117,8 @@ async def main():
             raise
         return
 
-    display_model = MODEL_STRING or MODEL
+    display_model = MODEL_STRING
     show_startup(console, display_model)
-    await prewarm_model(MODEL)
     session = build_session()
 
     scan_task = asyncio.create_task(asyncio.to_thread(_run_background_scan), name="background-home-scan")
@@ -202,7 +200,6 @@ async def handle_slash(cmd: str):
         state=state,
         conn=conn,
         console=console,
-        build_agent=build_agent,
     )
 
 

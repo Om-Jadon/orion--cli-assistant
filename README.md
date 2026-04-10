@@ -8,7 +8,7 @@ Orion is a terminal-first AI assistant for Linux that combines:
 - safety boundaries for risky operations,
 - streaming UX for fast interactive feedback.
 
-It supports both local inference (Ollama) and cloud providers (OpenAI, Anthropic, Gemini, Groq, Mistral) through provider-aware model configuration.
+It supports cloud providers (OpenAI, Anthropic, Gemini, Groq, Mistral) through provider-aware model configuration.
 
 ## Key Features
 
@@ -79,7 +79,6 @@ cli-assistant/
 - Linux
 - Python 3.13+
 - uv
-- Optional local inference: Ollama
 
 ## Installation
 
@@ -101,14 +100,6 @@ uv sync
 ```bash
 uv run playwright install webkit
 ```
-
-1. If using Ollama, pull models
-
-```bash
-ollama pull qwen3:4b
-```
-
-Note: The project currently uses fastembed for embeddings, so no Ollama embedding model is required.
 
 1. Build or refresh the file index
 
@@ -147,8 +138,7 @@ Orion reads runtime config from:
 
 Common fields:
 
-- model (used with Ollama path)
-- model_string (used for cloud providers)
+- model_string (required)
 - theme
 - max_width
 - trace_logging_enabled
@@ -158,7 +148,7 @@ Common fields:
 Example:
 
 ```toml
-model = "qwen3:1.7b"
+model_string = "openai:gpt-4o-mini"
 theme = "mocha"
 max_width = 100
 trace_logging_enabled = true
@@ -171,6 +161,16 @@ Cloud provider examples:
 model_string = "openai:gpt-4o-mini"
 # model_string = "anthropic:claude-sonnet-4-5"
 # model_string = "groq:openai/gpt-oss-120b"
+```
+
+Migration from legacy local config:
+
+```toml
+# old (no longer supported)
+# model = "qwen3:1.7b"
+
+# new
+model_string = "openai:gpt-4o-mini"
 ```
 
 Groq token-limit fallback policy:

@@ -2,7 +2,7 @@ import asyncio
 from dataclasses import dataclass
 from pathlib import Path
 import shutil as _shutil
-from typing import Any, Callable
+from typing import Any
 
 from memory.store import get_last_operation, get_recent_turns, get_user_profile
 
@@ -10,7 +10,6 @@ from memory.store import get_last_operation, get_recent_turns, get_user_profile
 @dataclass
 class RuntimeState:
     agent: Any
-    think_mode: bool
     session_id: str
 
 
@@ -20,7 +19,6 @@ async def handle_slash(
     state: RuntimeState,
     conn,
     console,
-    build_agent: Callable[..., Any],
 ):
     parts = cmd.strip().split()
     command = parts[0].lower() if parts else ""
@@ -30,7 +28,6 @@ async def handle_slash(
         console.print("  [accent]Slash commands[/accent]")
         console.print()
         console.print("  [dim]/help[/dim]       show this message")
-        console.print("  [dim]/think[/dim]      toggle chain-of-thought reasoning")
         console.print("  [dim]/clear[/dim]      clear the terminal")
         console.print("  [dim]/undo[/dim]       undo last file operation")
         console.print("  [dim]/history[/dim]    show this session's conversation")
@@ -42,14 +39,6 @@ async def handle_slash(
 
     if command == "/clear":
         console.clear()
-        return
-
-    if command == "/think":
-        state.think_mode = not state.think_mode
-        state.agent = build_agent(think=state.think_mode)
-        mode = "on" if state.think_mode else "off"
-        tag = "success" if state.think_mode else "warning"
-        console.print(f"[{tag}]Think mode {mode}.[/{tag}]")
         return
 
     if command == "/undo":

@@ -1,4 +1,5 @@
 import pytest
+from core.model_fallback import get_groq_token_limit_fallback_models
 
 
 class _FakeResult:
@@ -274,8 +275,4 @@ async def test_run_with_streaming_groq_reports_exhaustion_after_third_model(monk
     error_payloads = [payload for event, payload in events if event == "error"]
     assert any(payload.get("error_type") == "groq_token_limit_exhausted" for payload in error_payloads)
     exhausted_payload = [payload for payload in error_payloads if payload.get("error_type") == "groq_token_limit_exhausted"][0]
-    assert exhausted_payload.get("attempted_models") == [
-        "groq:openai/gpt-oss-120b",
-        "groq:llama-3.3-70b-versatile",
-        "groq:qwen/qwen3-32b",
-    ]
+    assert exhausted_payload.get("attempted_models") == list(get_groq_token_limit_fallback_models())

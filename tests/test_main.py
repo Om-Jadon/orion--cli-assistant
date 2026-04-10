@@ -33,7 +33,6 @@ async def test_main_ctrl_c_exits_loop_gracefully():
     with patch.object(main.sys, "argv", ["orion"]), \
          patch.object(main.sys.stdin, "isatty", return_value=True), \
          patch("main.show_startup"), \
-         patch("main.prewarm_model", new=AsyncMock()), \
          patch("main.build_session", return_value=MagicMock()), \
          patch("main.get_input", new=AsyncMock(side_effect=[KeyboardInterrupt()])) as mock_get_input, \
          patch("main.asyncio.to_thread", new=AsyncMock(return_value=None)), \

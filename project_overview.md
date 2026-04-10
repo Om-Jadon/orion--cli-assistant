@@ -2,7 +2,7 @@
 
 ## What This Project Is
 
-Orion is a Linux-first CLI AI assistant designed for practical local and cloud-assisted workflows.
+Orion is a Linux-first CLI AI assistant designed for practical cloud-assisted workflows.
 
 Primary goals:
 
@@ -42,7 +42,6 @@ Language/runtime:
 Agent and model layer:
 
 - pydantic-ai
-- openai SDK compatibility path for Ollama endpoint
 
 Terminal UX:
 
@@ -78,7 +77,6 @@ Runtime dependencies in pyproject.toml:
 - ddgs: web search (tools/search.py)
 - fastembed: local embeddings (memory/embeddings.py)
 - httpx: provider and startup connectivity checks (ui/startup.py)
-- openai: Ollama-compatible chat interface path
 - playwright: JS-heavy webpage fallback extraction (tools/browser.py)
 - prompt-toolkit: interactive input and confirmation prompts (ui/input.py, safety/confirm.py)
 - pydantic-ai: agent and tool-calling orchestration (core/agent.py)
@@ -95,8 +93,8 @@ Dev dependencies:
 
 Configured in config.py and ~/.orion/config.toml:
 
-- Model defaults and optional model_string override.
-- Provider detection (ollama/openai/anthropic/gemini/groq/mistral).
+- Required model_string runtime selection.
+- Provider detection (openai/anthropic/gemini/groq/mistral).
 - API key variable mapping for cloud providers.
 - Context budget constants.
 - Embedding model and dimensions.
@@ -133,7 +131,6 @@ It also initializes:
 
 core/agent.py builds the agent with provider-aware model configuration:
 
-- Ollama path: OpenAIChatModel with local endpoint and think/keep_alive extra_body.
 - Cloud path: provider-routed model string.
 
 Tool registration is centralized in build_agent and includes:

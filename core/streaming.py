@@ -4,7 +4,7 @@ from typing import AsyncGenerator
 from pydantic_ai import Agent
 from ui.renderer import console, stream_response
 from ui.spinner import Spinner
-from config import MODEL, MODEL_STRING, PROVIDER
+from config import MODEL_STRING, PROVIDER
 from core import trace_logging as trace_logging
 from core.model_fallback import get_groq_token_limit_fallback_models
 
@@ -148,7 +148,7 @@ async def run_with_streaming(agent: Agent, prompt: str, context: str = "") -> st
     leaks literal tool-call syntax (e.g. <function/...>) into plain text output.
     """
     base_prompt = f"{context}\n\n{prompt}" if context else prompt
-    model_name = MODEL_STRING or MODEL
+    model_name = MODEL_STRING
 
     try:
         if PROVIDER != "groq":

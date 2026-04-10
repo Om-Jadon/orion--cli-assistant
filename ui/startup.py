@@ -1,15 +1,12 @@
-import logging
 import os
 import sys
-import httpx
 from rich.console import Console
 from rich.rule import Rule
 from rich.text import Text
-from config import OLLAMA_API_BASE, DB_PATH, PROVIDER, CLOUD_API_KEY_VARS
+from config import DB_PATH, PROVIDER, CLOUD_API_KEY_VARS
 
 
 _STATUS_NAME_WIDTH = 10  # column width for status label alignment
-logger = logging.getLogger(__name__)
 
 
 def show_startup(console: Console, model: str):
@@ -33,24 +30,14 @@ def show_startup(console: Console, model: str):
     console.print(Rule(style="#45475A"))
     console.print()
 
-    if PROVIDER == "ollama":
-        ollama_ok = _check_ollama()
-        db_ok = _check_db()
-        index_ok = _check_index()
-        checks = [
-            ("ollama", ollama_ok, "connected" if ollama_ok else "offline"),
-            ("memory", db_ok,     "active" if db_ok else "run /scan"),
-            ("index",  index_ok,  f"{_index_count():,} files" if index_ok else "run /scan"),
-        ]
-    else:
-        api_ok = _check_api_key(PROVIDER)
-        db_ok = _check_db()
-        index_ok = _check_index()
-        checks = [
-            (PROVIDER, api_ok,   "ready" if api_ok else "missing"),
-            ("memory", db_ok,    "active" if db_ok else "run /scan"),
-            ("index",  index_ok, f"{_index_count():,} files" if index_ok else "run /scan"),
-        ]
+    api_ok = _check_api_key(PROVIDER)
+    db_ok = _check_db()
+    index_ok = _check_index()
+    checks = [
+        (PROVIDER, api_ok,   "ready" if api_ok else "missing"),
+        ("memory", db_ok,    "active" if db_ok else "run /scan"),
+        ("index",  index_ok, f"{_index_count():,} files" if index_ok else "run /scan"),
+    ]
 
     for name, ok, status_text in checks:
         dot = "[#A6E3A1]●[/#A6E3A1]" if ok else "[#F38BA8]●[/#F38BA8]"
@@ -78,14 +65,6 @@ def _check_api_key(provider: str) -> bool:
         file=sys.stderr,
     )
     sys.exit(1)
-
-
-def _check_ollama() -> bool:
-    try:
-        r = httpx.get(f"{OLLAMA_API_BASE}/api/tags", timeout=2)
-        return r.status_code == 200
-    except Exception:
-        return False
 
 
 def _check_db() -> bool:
@@ -116,19 +95,3 @@ def _index_count() -> int:
         return count
     except Exception:
         return 0
-
-
-async def prewarm_model(model: str):
-    """Pre-load the Ollama model to avoid cold-start on first query.
-    No-op for cloud providers."""
-    if PROVIDER != "ollama":
-        return
-    try:
-        async with httpx.AsyncClient() as client:
-            await client.post(
-                f"{OLLAMA_API_BASE}/api/generate",
-                json={"model": model, "prompt": "", "keep_alive": "10m"},
-                timeout=30,
-            )
-    except Exception as e:
-        logger.debug("prewarm failed: %s", e)

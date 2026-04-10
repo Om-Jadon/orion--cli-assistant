@@ -6,7 +6,6 @@ import main
 def test_main_uses_shared_runtime_state():
     assert hasattr(main, "state")
     assert hasattr(main.state, "agent")
-    assert hasattr(main.state, "think_mode")
     assert hasattr(main.state, "session_id")
 
 
@@ -26,7 +25,6 @@ async def test_help_prints_output():
     with patch("main.console") as mock_console:
         mock_console.print = lambda *a, **kw: printed.append(a[0] if a else "")
         await main.handle_slash("/help")
-    assert any("/think" in str(line) for line in printed)
     assert any("/clear" in str(line) for line in printed)
     assert any("/undo" in str(line) for line in printed)
     assert any("/history" in str(line) for line in printed)
@@ -51,7 +49,6 @@ async def test_help_lists_all_commands():
         await main.handle_slash("/help")
     all_text = " ".join(str(line) for line in printed)
     assert "/help" in all_text
-    assert "/think" in all_text
     assert "/clear" in all_text
     assert "/undo" in all_text
     assert "/history" in all_text
@@ -66,7 +63,7 @@ async def test_help_case_insensitive():
     with patch("main.console") as mock_console:
         mock_console.print = lambda *a, **kw: printed.append(a[0] if a else "")
         await main.handle_slash("/HELP")
-    assert any("/think" in str(line) for line in printed)
+    assert any("/clear" in str(line) for line in printed)
 
 
 @pytest.mark.asyncio
@@ -141,45 +138,3 @@ async def test_undo_delete_prints_restore_hint():
     assert any("trash" in str(line).lower() for line in printed)
 
 
-@pytest.mark.asyncio
-async def test_think_toggles_mode_on():
-    original_agent = main.state.agent
-    original_think = main.state.think_mode
-    main.state.think_mode = False
-    printed = []
-    try:
-        with patch("main.console") as mock_console, \
-             patch("main.build_agent") as mock_build:
-            mock_console.print = lambda *a, **kw: printed.append(a[0] if a else "")
-            new_agent = MagicMock()
-            mock_build.return_value = new_agent
-            await main.handle_slash("/think")
-        assert main.state.think_mode is True
-        mock_build.assert_called_once_with(think=True)
-        assert main.state.agent is new_agent
-        assert any("on" in str(line).lower() for line in printed)
-    finally:
-        main.state.think_mode = original_think
-        main.state.agent = original_agent
-
-
-@pytest.mark.asyncio
-async def test_think_toggles_mode_off():
-    original_agent = main.state.agent
-    original_think = main.state.think_mode
-    main.state.think_mode = True
-    printed = []
-    try:
-        with patch("main.console") as mock_console, \
-             patch("main.build_agent") as mock_build:
-            mock_console.print = lambda *a, **kw: printed.append(a[0] if a else "")
-            new_agent = MagicMock()
-            mock_build.return_value = new_agent
-            await main.handle_slash("/think")
-        assert main.state.think_mode is False
-        mock_build.assert_called_once_with(think=False)
-        assert main.state.agent is new_agent
-        assert any("off" in str(line).lower() for line in printed)
-    finally:
-        main.state.think_mode = original_think
-        main.state.agent = original_agent

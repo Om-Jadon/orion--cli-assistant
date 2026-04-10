@@ -13,12 +13,6 @@ def test_paths_are_under_home():
     assert config.TRACE_LOG_DIR.is_relative_to(home)
 
 
-def test_default_model():
-    import config
-    assert config.MODEL == "qwen3:1.7b"
-    assert config.EMBED_MODEL == "BAAI/bge-small-en-v1.5"
-
-
 def test_legacy_think_off_constant_removed():
     import config
     assert not hasattr(config, "THINK_OFF")
@@ -31,23 +25,11 @@ def test_default_theme_and_width():
     assert config.MAX_WIDTH == 100
 
 
-def test_ollama_urls():
-    import config
-    assert config.OLLAMA_BASE == "http://localhost:11434/v1"
-    assert config.OLLAMA_API_BASE == "http://localhost:11434"
-
-
 def test_embed_dim():
     import config
-    # bge-small-en-v1.5 outputs 384-dim vectors (fastembed, no Ollama required)
+    assert config.EMBED_MODEL == "BAAI/bge-small-en-v1.5"
+    # bge-small-en-v1.5 outputs 384-dim vectors
     assert config.EMBED_DIM == 384
-
-
-def test_keep_alive_values_are_strings():
-    import config
-    assert isinstance(config.KEEP_ALIVE_ACTIVE, str)
-    assert isinstance(config.KEEP_ALIVE_IDLE, str)
-    assert isinstance(config.KEEP_ALIVE_BATTERY, str)
 
 
 def test_context_budgets_are_positive_ints():
@@ -71,7 +53,7 @@ def test_toml_override_updates_public_constants(tmp_path):
     """
     toml_file = tmp_path / "config.toml"
     toml_file.write_text(
-        'model = "qwen3:1.7b"\n'
+        'model_string = "openai:gpt-4o-mini"\n'
         'max_width = 80\n'
         'trace_logging_enabled = false\n'
         'trace_log_retention_days = 14\n'
@@ -81,7 +63,8 @@ def test_toml_override_updates_public_constants(tmp_path):
     try:
         with patch.object(cfg, "CONFIG_FILE", toml_file):
             importlib.reload(cfg)
-            assert cfg.MODEL == "qwen3:1.7b"
+            assert cfg.MODEL_STRING == "openai:gpt-4o-mini"
+            assert cfg.PROVIDER == "openai"
             assert cfg.MAX_WIDTH == 80
             assert cfg.TRACE_LOGGING_ENABLED is False
             assert cfg.TRACE_LOG_RETENTION_DAYS == 14
@@ -90,39 +73,28 @@ def test_toml_override_updates_public_constants(tmp_path):
         importlib.reload(cfg)
 
 
-def test_toml_missing_returns_defaults(tmp_path):
-    """When config.toml is absent, module falls back to hardcoded defaults."""
+def test_toml_missing_model_string_exits(tmp_path):
+    """When config.toml is absent, model_string requirement must hard-fail."""
     import config as cfg
     try:
         with patch.object(cfg, "CONFIG_FILE", tmp_path / "nonexistent.toml"):
-            importlib.reload(cfg)
-            assert cfg.MODEL == "qwen3:1.7b"
-            assert cfg.THEME == "mocha"
-            assert cfg.MAX_WIDTH == 100
+            with pytest.raises(SystemExit):
+                importlib.reload(cfg)
     finally:
         importlib.reload(cfg)
 
 
-def test_default_model_string_is_none(tmp_path):
-    """When model_string is absent from config.toml, MODEL_STRING must be None."""
-    import importlib
-    from unittest.mock import patch
+def test_model_string_absent_in_toml_exits(tmp_path):
+    """model_string key missing from config.toml must hard-fail."""
     import config as cfg
-    with patch.object(cfg, "CONFIG_FILE", tmp_path / "nonexistent.toml"):
+    toml_file = tmp_path / "config.toml"
+    toml_file.write_text('theme = "mocha"\n')
+    try:
+        with patch.object(cfg, "CONFIG_FILE", toml_file):
+            with pytest.raises(SystemExit):
+                importlib.reload(cfg)
+    finally:
         importlib.reload(cfg)
-        assert cfg.MODEL_STRING is None
-    importlib.reload(cfg)
-
-
-def test_default_provider_is_ollama(tmp_path):
-    """When MODEL_STRING is None, PROVIDER must default to 'ollama'."""
-    import importlib
-    from unittest.mock import patch
-    import config as cfg
-    with patch.object(cfg, "CONFIG_FILE", tmp_path / "nonexistent.toml"):
-        importlib.reload(cfg)
-        assert cfg.PROVIDER == "ollama"
-    importlib.reload(cfg)
 
 
 def test_cloud_api_key_vars_contains_all_providers():
@@ -141,7 +113,6 @@ def test_provider_detection_from_model_string(tmp_path):
         ("gemini-2.0-flash",               "gemini"),
         ("groq:llama-3.3-70b-versatile",   "groq"),
         ("mistral:mistral-large-latest",    "mistral"),
-        ("qwen3:4b",                        "ollama"),
     ]
     import config as cfg
     for model_str, expected_provider in cases:
@@ -157,18 +128,16 @@ def test_provider_detection_from_model_string(tmp_path):
     importlib.reload(cfg)
 
 
-def test_model_string_none_when_absent(tmp_path):
-    """model_string key absent from config.toml -> MODEL_STRING is None."""
-    import importlib
-    from unittest.mock import patch
+def test_unknown_provider_prefix_exits(tmp_path):
     import config as cfg
-    toml_file = tmp_path / "config.toml"
-    toml_file.write_text('model = "qwen3:4b"\n')
-    with patch.object(cfg, "CONFIG_FILE", toml_file):
+    toml_file = tmp_path / "invalid.toml"
+    toml_file.write_text('model_string = "qwen3:4b"\n')
+    try:
+        with patch.object(cfg, "CONFIG_FILE", toml_file):
+            with pytest.raises(SystemExit):
+                importlib.reload(cfg)
+    finally:
         importlib.reload(cfg)
-        assert cfg.MODEL_STRING is None
-        assert cfg.PROVIDER == "ollama"
-    importlib.reload(cfg)
 
 
 def test_groq_token_limit_fallback_model_order_is_fixed():
@@ -176,6 +145,6 @@ def test_groq_token_limit_fallback_model_order_is_fixed():
 
     assert get_groq_token_limit_fallback_models() == (
         "groq:openai/gpt-oss-120b",
-        "groq:llama-3.3-70b-versatile",
         "groq:qwen/qwen3-32b",
+        "groq:llama-3.3-70b-versatile",
     )

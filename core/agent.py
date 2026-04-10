@@ -4,56 +4,25 @@ import inspect
 import functools
 from pathlib import Path
 from pydantic_ai import Agent
-from pydantic_ai.models.openai import OpenAIChatModel
-from pydantic_ai.providers.openai import OpenAIProvider
-from config import OLLAMA_BASE, MODEL, MODEL_STRING, PROVIDER, KEEP_ALIVE_ACTIVE
+from config import MODEL_STRING
 from core import trace_logging as trace_logging
 
 
-def build_agent(think: bool = False, model_string_override: str | None = None) -> Agent:
+def build_agent(model_string_override: str | None = None) -> Agent:
     """
-    Build a PydanticAI agent for the configured provider.
+    Build a cloud provider-backed PydanticAI agent.
 
-    Ollama path (PROVIDER == 'ollama'):
-        Uses OpenAIChatModel + OpenAIProvider pointed at local Ollama.
-        Supports think=True (Qwen3 chain-of-thought) and keep_alive.
-
-    Cloud path (any other PROVIDER):
-        Passes MODEL_STRING directly to Agent().
-        PydanticAI handles provider routing and reads the API key from env.
-        think=True is silently ignored (cloud models don't support it).
+    MODEL_STRING is required by config; model_string_override is used for
+    controlled model switching flows (for example Groq fallback attempts).
     """
     selected_model_string = model_string_override or MODEL_STRING
-    use_cloud_path = PROVIDER != "ollama" or model_string_override is not None
-
-    if not use_cloud_path:
-        model = OpenAIChatModel(
-            MODEL,
-            provider=OpenAIProvider(
-                base_url=OLLAMA_BASE,
-                api_key="ollama",
-            )
-        )
-        agent = Agent(
-            model=model,
-            system_prompt=_build_system_prompt(),
-            model_settings={
-                "extra_body": {
-                    "think": think,
-                    "keep_alive": KEEP_ALIVE_ACTIVE,
-                }
-            },
-        )
-    else:
-        # Cloud: PydanticAI resolves the provider from the model string prefix.
-        # e.g. "openai:gpt-4o", "anthropic:claude-sonnet-4-5", "gemini-2.0-flash"
-        if not selected_model_string:
-            raise ValueError("Cloud agent build requires a model string.")
-        agent = Agent(
-            selected_model_string,
-            system_prompt=_build_system_prompt(),
-            model_settings={"parallel_tool_calls": False},
-        )
+    if not selected_model_string:
+        raise ValueError("Cloud agent build requires a model string.")
+    agent = Agent(
+        selected_model_string,
+        system_prompt=_build_system_prompt(),
+        model_settings={"parallel_tool_calls": False},
+    )
 
     from tools.files import find_files, list_directory, read_file, open_file, move_file, delete_file
     from tools.shell import run_shell

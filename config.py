@@ -16,7 +16,6 @@ CONFIG_FILE = (
 )
 
 _defaults = {
-    "model": "qwen3:1.7b",
     "theme": "mocha",
     "max_width": 100,
     "trace_logging_enabled": True,
@@ -52,7 +51,6 @@ def _load_user_config() -> dict:
 
 _user = _load_user_config()
 
-MODEL     = _user.get("model",     _defaults["model"])
 THEME     = _user.get("theme",     _defaults["theme"])
 MAX_WIDTH = int(_user.get("max_width", _defaults["max_width"]))
 
@@ -71,7 +69,17 @@ else:
 
 # --- Cloud provider support ---
 
-MODEL_STRING: str | None = _user.get("model_string", None)
+def _require_model_string(value: object) -> str:
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+    raise SystemExit(
+        "Error: model_string is required in ~/.orion/config.toml.\n"
+        "Example: model_string = \"openai:gpt-4o-mini\"\n"
+        "Supported prefixes: openai:, anthropic:, gemini-, groq:, mistral:"
+    )
+
+
+MODEL_STRING: str = _require_model_string(_user.get("model_string"))
 
 CLOUD_API_KEY_VARS: dict[str, str] = {
     "openai":    "OPENAI_API_KEY",
@@ -81,9 +89,7 @@ CLOUD_API_KEY_VARS: dict[str, str] = {
     "mistral":   "MISTRAL_API_KEY",
 }
 
-def _detect_provider(model_string: str | None) -> str:
-    if model_string is None:
-        return "ollama"
+def _detect_provider(model_string: str) -> str:
     if model_string.startswith("openai:"):
         return "openai"
     if model_string.startswith("anthropic:"):
@@ -94,18 +100,15 @@ def _detect_provider(model_string: str | None) -> str:
         return "groq"
     if model_string.startswith("mistral:"):
         return "mistral"
-    return "ollama"
+    raise SystemExit(
+        f"Error: unsupported model_string {model_string!r}.\n"
+        "Supported prefixes: openai:, anthropic:, gemini-, groq:, mistral:"
+    )
 
 PROVIDER: str = _detect_provider(MODEL_STRING)
 
-OLLAMA_BASE        = "http://localhost:11434/v1"   # OpenAI-compatible endpoint (used by openai SDK)
-OLLAMA_API_BASE    = "http://localhost:11434"       # Native Ollama API (used for embeddings, tags, generate)
 EMBED_MODEL        = "BAAI/bge-small-en-v1.5"  # fastembed local model, no Ollama needed
 EMBED_DIM          = 384   # bge-small-en-v1.5 output dimension
-
-KEEP_ALIVE_ACTIVE  = "10m"
-KEEP_ALIVE_IDLE    = "2m"
-KEEP_ALIVE_BATTERY = "30s"
 
 CONTEXT_PROFILE   = 800
 CONTEXT_RECENT    = 2000
