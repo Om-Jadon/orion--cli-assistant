@@ -2,6 +2,7 @@ import os
 import sys
 import httpx
 from rich.console import Console
+from rich.rule import Rule
 from rich.text import Text
 from config import OLLAMA_API_BASE, DB_PATH, PROVIDER, CLOUD_API_KEY_VARS
 
@@ -9,36 +10,48 @@ from config import OLLAMA_API_BASE, DB_PATH, PROVIDER, CLOUD_API_KEY_VARS
 def show_startup(console: Console, model: str):
     console.clear()
 
-    wordmark = Text()
-    wordmark.append("  ◆ ", style="#89B4FA bold")
-    wordmark.append("orion", style="#CDD6F4 bold")
-    wordmark.append(f"  {model}", style="#6C7086")
+    line1 = Text()
+    line1.append("  ◆", style="#89B4FA bold")
+    line1.append("  ")
+    line1.append("orion", style="#CDD6F4 bold")
+
+    line2 = Text()
+    line2.append(f"     {model}", style="#6C7086")
 
     console.print()
-    console.print(wordmark)
-    console.print("  [#6C7086]" + "─" * 40 + "[/#6C7086]")
-
+    console.print()
+    console.print(line1)
+    console.print(line2)
+    console.print()
     console.print("  [#6C7086]quick · fluent · native[/#6C7086]")
-
+    console.print()
+    console.print(Rule(style="#45475A"))
     console.print()
 
     if PROVIDER == "ollama":
+        ollama_ok = _check_ollama()
+        db_ok = _check_db()
+        index_ok = _check_index()
         checks = [
-            ("ollama", _check_ollama()),
-            ("memory", _check_db()),
-            ("index",  _check_index()),
+            ("ollama", ollama_ok, "connected" if ollama_ok else "offline"),
+            ("memory", db_ok,     "active" if db_ok else "run --init"),
+            ("index",  index_ok,  f"{_index_count():,} files" if index_ok else "run --init"),
         ]
     else:
+        api_ok = _check_api_key(PROVIDER)
+        db_ok = _check_db()
+        index_ok = _check_index()
         checks = [
-            (PROVIDER,  _check_api_key(PROVIDER)),
-            ("memory",  _check_db()),
-            ("index",   _check_index()),
+            (PROVIDER, api_ok,   "ready"),
+            ("memory", db_ok,    "active" if db_ok else "run --init"),
+            ("index",  index_ok, f"{_index_count():,} files" if index_ok else "run --init"),
         ]
 
-    for name, ok in checks:
+    for name, ok, status_text in checks:
         dot = "[#A6E3A1]●[/#A6E3A1]" if ok else "[#F38BA8]●[/#F38BA8]"
-        console.print(f"  {dot} [#6C7086]{name}[/#6C7086]")
+        console.print(f"  {dot} [#6C7086]{name:<10}[/#6C7086] [#585B70]{status_text}[/#585B70]")
 
+    console.print()
     console.print()
 
 
@@ -85,6 +98,19 @@ def _check_index() -> bool:
         return count > 0
     except Exception:
         return False
+
+
+def _index_count() -> int:
+    if not DB_PATH.exists():
+        return 0
+    import sqlite3
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        count = conn.execute("SELECT COUNT(*) FROM files").fetchone()[0]
+        conn.close()
+        return count
+    except Exception:
+        return 0
 
 
 async def prewarm_model(model: str):
