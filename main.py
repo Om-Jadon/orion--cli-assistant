@@ -93,6 +93,7 @@ async def main():
 
         except KeyboardInterrupt:
             console.print("\n[#6C7086]Interrupted.[/#6C7086]")
+            break
         except EOFError:
             break
 
@@ -123,8 +124,14 @@ async def handle_slash(cmd: str):
     )
 
 
-if __name__ == "__main__":
+def run():
     try:
         asyncio.run(main())
+    except KeyboardInterrupt:
+        console.print("\n[#6C7086]Interrupted.[/#6C7086]")
     finally:
         conn.close()
+
+
+if __name__ == "__main__":
+    run()

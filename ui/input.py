@@ -15,7 +15,7 @@ def build_session() -> PromptSession:
 
     @bindings.add("c-c")
     def interrupt(event):
-        raise KeyboardInterrupt
+        event.app.exit(exception=KeyboardInterrupt())
 
     return PromptSession(
         history=FileHistory(str(HISTORY_FILE)),

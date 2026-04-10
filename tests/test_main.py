@@ -29,6 +29,22 @@ async def test_main_pipe_mode_calls_streaming():
 
 
 @pytest.mark.asyncio
+async def test_main_ctrl_c_exits_loop_gracefully():
+    with patch.object(main.sys, "argv", ["orion"]), \
+         patch.object(main.sys.stdin, "isatty", return_value=True), \
+         patch("main.show_startup"), \
+         patch("main.prewarm_model", new=AsyncMock()), \
+         patch("main.build_session", return_value=MagicMock()), \
+         patch("main.get_input", new=AsyncMock(side_effect=[KeyboardInterrupt()])) as mock_get_input, \
+         patch("main.asyncio.to_thread", new=AsyncMock(return_value=None)), \
+         patch("main.console.print") as mock_print:
+        await main.main()
+
+    mock_get_input.assert_awaited_once()
+    assert any("Interrupted." in str(call.args[0]) for call in mock_print.call_args_list if call.args)
+
+
+@pytest.mark.asyncio
 async def test_run_once_resets_confirmation_turn_state_before_agent_run():
     with patch("main.safety_confirm.reset_turn_state") as mock_reset, \
          patch("main.print_user"), \
@@ -84,3 +100,19 @@ def test_run_background_scan_closes_connection_on_error():
             main._run_background_scan()
 
     fake_conn.close.assert_called_once()
+
+
+    def test_run_catches_keyboardinterrupt_from_asyncio_run_and_closes_connection():
+        fake_conn = MagicMock()
+
+        def _raise_interrupt(coro):
+            coro.close()
+            raise KeyboardInterrupt()
+
+        with patch.object(main, "conn", fake_conn), \
+             patch("main.asyncio.run", side_effect=_raise_interrupt), \
+             patch("main.console.print") as mock_print:
+            main.run()
+
+        fake_conn.close.assert_called_once()
+        assert any("Interrupted." in str(call.args[0]) for call in mock_print.call_args_list if call.args)
