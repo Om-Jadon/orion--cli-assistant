@@ -16,18 +16,18 @@ It supports both local inference (Ollama) and cloud providers (OpenAI, Anthropic
 - One-shot mode for direct commands.
 - Pipe mode for log and text analysis from stdin.
 - Slash commands for runtime control:
-	- /help, /think, /clear, /undo, /history, /memory, /scan, /exit
+  - /help, /think, /clear, /undo, /history, /memory, /scan, /exit
 - Hybrid memory retrieval:
-	- SQLite conversation/profile store
-	- FTS5 keyword retrieval
-	- sqlite-vec semantic retrieval with fastembed vectors
+  - SQLite conversation/profile store
+  - FTS5 keyword retrieval
+  - sqlite-vec semantic retrieval with fastembed vectors
 - Web and media tooling:
-	- DuckDuckGo search via ddgs
-	- page extraction via trafilatura and Playwright fallback
+  - DuckDuckGo search via ddgs
+  - page extraction via trafilatura and Playwright fallback
 - Safety model:
-	- HOME path boundary enforcement
-	- sudo/root command blocking
-	- destructive action confirmation
+  - HOME path boundary enforcement
+  - sudo/root command blocking
+  - destructive action confirmation
 - Structured debug logs written to ~/.orion/debug.log.
 
 ## Architecture Overview
@@ -35,24 +35,24 @@ It supports both local inference (Ollama) and cloud providers (OpenAI, Anthropic
 The runtime is split into focused layers:
 
 - Entry and orchestration:
-	- main.py routes init, one-shot, pipe, and interactive modes
+  - main.py routes init, one-shot, pipe, and interactive modes, with a dedicated background scan connection
 - Agent core:
-	- core/agent.py builds a provider-aware PydanticAI agent and registers tools
-	- core/streaming.py handles streaming and retry logic
-	- core/context.py assembles profile, recent turns, and retrieved memory
+  - core/agent.py builds a provider-aware PydanticAI agent and registers tools
+  - core/streaming.py handles streaming and retry logic
+  - core/context.py assembles profile, recent turns, and retrieved memory
 - Memory subsystem:
-	- memory/db.py schema and connection setup
-	- memory/store.py conversation/profile/operation persistence
-	- memory/retrieval.py hybrid FTS + vector search
-	- memory/indexer.py home file metadata indexing
-	- memory/extractor.py profile fact extraction
-	- memory/embeddings.py fastembed vector generation
+  - memory/db.py schema and connection setup
+  - memory/store.py conversation/profile/operation persistence
+  - memory/retrieval.py hybrid FTS + vector search
+  - memory/indexer.py home file metadata indexing
+  - memory/extractor.py profile fact extraction
+  - memory/embeddings.py fastembed vector generation using config-sourced model settings
 - Tools:
-	- tools/files.py, tools/shell.py, tools/browser.py, tools/search.py, tools/media.py
+  - tools/files.py, tools/shell.py, tools/browser.py, tools/search.py, tools/media.py (including hardened file-search fallback behavior)
 - UI and controls:
-	- ui/renderer.py, ui/input.py, ui/spinner.py, ui/startup.py, ui/slash.py
+  - ui/renderer.py, ui/input.py, ui/spinner.py, ui/startup.py, ui/slash.py
 - Safety:
-	- safety/boundaries.py and safety/confirm.py
+  - safety/boundaries.py and safety/confirm.py
 
 For a deeper technical breakdown, see project_overview.md.
 
@@ -82,26 +82,26 @@ cli-assistant/
 
 ## Installation
 
-1) Install uv
+1. Install uv
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-2) Install dependencies
+1. Install dependencies
 
 ```bash
 cd /path/to/cli-assistant
 uv sync
 ```
 
-3) Install Playwright runtime (used for JS-rendered page fallback)
+1. Install Playwright runtime (used for JS-rendered page fallback)
 
 ```bash
 uv run playwright install webkit
 ```
 
-4) If using Ollama, pull models
+1. If using Ollama, pull models
 
 ```bash
 ollama pull qwen3:4b
@@ -109,7 +109,7 @@ ollama pull qwen3:4b
 
 Note: The project currently uses fastembed for embeddings, so no Ollama embedding model is required.
 
-5) Build initial file index
+1. Build initial file index
 
 ```bash
 uv run main.py --init
@@ -209,4 +209,3 @@ Use this file when diagnosing provider, retrieval, and prewarm issues.
 ## Project Documentation
 
 - project_overview.md is the canonical detailed technical document.
-

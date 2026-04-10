@@ -14,6 +14,7 @@ from memory.store import save_turn
 from memory.extractor import extract_and_store
 from config import MODEL, MODEL_STRING, ORION_DIR
 from tools import files as file_tools
+from safety import confirm as safety_confirm
 
 ORION_DIR.mkdir(parents=True, exist_ok=True)
 logging.basicConfig(level=logging.DEBUG, filename=str(ORION_DIR / "debug.log"))
@@ -25,6 +26,25 @@ state = slash.RuntimeState(
 )
 conn = get_connection()
 file_tools.set_connection(conn)
+
+
+def _run_background_scan():
+    from memory.indexer import scan_home
+
+    scan_conn = get_connection()
+    try:
+        scan_home(scan_conn)
+    finally:
+        scan_conn.close()
+
+
+def _on_background_scan_done(task: asyncio.Task):
+    try:
+        task.result()
+    except asyncio.CancelledError:
+        logging.debug("Background home scan task cancelled.")
+    except Exception:
+        logging.exception("Background home scan task failed.")
 
 
 async def main():
@@ -47,7 +67,13 @@ async def main():
         piped_input = sys.stdin.read()
         user_query = sys.argv[1] if len(sys.argv) > 1 else "Analyze this:"
         full_query = f"{user_query}\n\n```\n{piped_input[:4000]}\n```"
-        response = await run_with_streaming(state.agent, full_query)
+        safety_confirm.reset_turn_state()
+        save_turn(conn, state.session_id, "user", full_query)
+        extract_and_store(conn, full_query)
+        context = await build_context(conn, full_query, state.session_id)
+        response = await run_with_streaming(state.agent, full_query, context=context)
+        if response:
+            save_turn(conn, state.session_id, "assistant", response)
         print(response)
         return
 
@@ -56,8 +82,8 @@ async def main():
     await prewarm_model(MODEL)
     session = build_session()
 
-    from memory.indexer import scan_home
-    asyncio.create_task(asyncio.to_thread(scan_home, conn))
+    scan_task = asyncio.create_task(asyncio.to_thread(_run_background_scan), name="background-home-scan")
+    scan_task.add_done_callback(_on_background_scan_done)
 
     while True:
         try:
@@ -80,6 +106,7 @@ async def main():
 
 
 async def run_once(query: str):
+    safety_confirm.reset_turn_state()
     print_user(query)
 
     save_turn(conn, state.session_id, "user", query)
@@ -105,4 +132,7 @@ async def handle_slash(cmd: str):
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    finally:
+        conn.close()

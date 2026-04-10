@@ -1,14 +1,14 @@
 import asyncio
 import struct
 from fastembed import TextEmbedding
-from config import EMBED_DIM
+from config import EMBED_DIM, EMBED_MODEL
 
 _model: TextEmbedding | None = None
 
 def _get_model() -> TextEmbedding:
     global _model
     if _model is None:
-        _model = TextEmbedding("BAAI/bge-small-en-v1.5")
+        _model = TextEmbedding(EMBED_MODEL)
     return _model
 
 

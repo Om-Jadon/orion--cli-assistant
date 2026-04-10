@@ -1,5 +1,6 @@
 import json
 import sqlite3
+from math import ceil
 from config import CONTEXT_RECENT
 
 
@@ -26,12 +27,19 @@ def get_recent_turns(conn: sqlite3.Connection, session_id: str,
     total = 0
     for row in reversed(rows):
         entry = f"{row['role'].upper()}: {row['content']}"
-        total += len(entry.split())
+        total += _estimate_token_count(entry)
         if total > max_tokens:
             break
         lines.append(entry)
 
     return "\n".join(lines)
+
+
+def _estimate_token_count(text: str) -> int:
+    # Use a conservative estimate to avoid undercounting code/URLs with little whitespace.
+    word_estimate = len(text.split())
+    char_estimate = ceil(len(text) / 4)
+    return max(word_estimate, char_estimate)
 
 
 def upsert_profile(conn: sqlite3.Connection, key: str, value: str,

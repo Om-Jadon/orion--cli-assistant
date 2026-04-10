@@ -62,3 +62,16 @@ def test_idempotent_migrations(isolated_db):
     # Second call must not raise
     conn2 = get_connection()
     conn2.close()
+
+
+def test_vec_memory_dimension_matches_config(isolated_db):
+    import config
+    from memory.db import get_connection
+
+    conn = get_connection()
+    sql = conn.execute(
+        "SELECT sql FROM sqlite_master WHERE type='table' AND name='vec_memory'"
+    ).fetchone()[0]
+
+    assert f"float[{config.EMBED_DIM}]" in sql
+    conn.close()

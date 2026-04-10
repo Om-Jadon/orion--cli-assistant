@@ -78,3 +78,20 @@ def test_build_agent_cloud_no_extra_body():
         call_kwargs = mock_ac.call_args.kwargs
         model_settings = call_kwargs.get("model_settings", {})
         assert "extra_body" not in model_settings
+
+
+def test_system_prompt_instructs_no_retry_after_cancelled_confirmation():
+    ca = _reload_agent()
+    with patch("core.agent.PROVIDER", "openai"), \
+         patch("core.agent.MODEL_STRING", "openai:gpt-4o"), \
+         patch("core.agent.Agent") as mock_ac:
+        mock_ac.return_value = MagicMock()
+        ca.build_agent(think=False)
+
+        system_prompt = mock_ac.call_args.kwargs.get("system_prompt", "")
+        assert "do not retry" in system_prompt.lower()
+        assert "user cancels" in system_prompt.lower()
+        assert "do not ask follow-up confirmation questions" in system_prompt.lower()
+        assert "tools handle confirmations" in system_prompt.lower()
+        assert "tool outputs explicitly state whether confirmation was approved or denied" in system_prompt.lower()
+        assert "confirmation denied" in system_prompt.lower()

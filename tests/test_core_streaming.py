@@ -93,3 +93,25 @@ async def test_run_with_streaming_retries_on_failed_generation(monkeypatch):
     assert result == "normal response"
     assert len(agent.prompts) == 2
     assert "Use tool calls directly" in agent.prompts[1]
+
+
+@pytest.mark.asyncio
+async def test_run_with_streaming_keeps_model_response_after_cancelled_tool(monkeypatch):
+    import core.streaming as cs
+
+    async def _capture(gen):
+        out = ""
+        async for token in gen:
+            out += token
+        return out
+
+    monkeypatch.setattr(cs, "stream_response", _capture)
+    monkeypatch.setattr(cs, "spinner", _FakeSpinner())
+
+    agent = _FakeAgent([
+        "Understood. Operation cancelled by user confirmation.",
+    ])
+
+    result = await cs.run_with_streaming(agent, "move it back")
+
+    assert result == "Understood. Operation cancelled by user confirmation."

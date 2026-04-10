@@ -1,6 +1,6 @@
 import sqlite3
 import sqlite_vec
-from config import DB_PATH
+from config import DB_PATH, EMBED_DIM
 
 
 def get_connection() -> sqlite3.Connection:
@@ -17,7 +17,7 @@ def get_connection() -> sqlite3.Connection:
 
 
 def _run_migrations(conn: sqlite3.Connection):
-    conn.executescript("""
+    conn.executescript(f"""
         CREATE TABLE IF NOT EXISTS conversations (
             id          INTEGER PRIMARY KEY,
             session_id  TEXT NOT NULL,
@@ -58,7 +58,7 @@ def _run_migrations(conn: sqlite3.Connection):
         );
 
         CREATE VIRTUAL TABLE IF NOT EXISTS vec_memory USING vec0(
-            embedding float[384]
+            embedding float[{EMBED_DIM}]
         );
 
         CREATE TABLE IF NOT EXISTS vec_meta (

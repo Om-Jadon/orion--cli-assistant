@@ -4,6 +4,25 @@ import tempfile
 import sqlite3
 import subprocess
 from unittest.mock import AsyncMock, patch
+from safety.confirm import ConfirmationResult
+
+
+def _confirm_result(
+    decision: str,
+    *,
+    action: str,
+    source_path: str | None = None,
+    destination_path: str | None = None,
+    repeated_denial: bool = False,
+) -> ConfirmationResult:
+    return ConfirmationResult(
+        decision=decision,
+        scope="file",
+        action=action,
+        source_path=source_path,
+        destination_path=destination_path,
+        repeated_denial=repeated_denial,
+    )
 
 
 @pytest.mark.asyncio
@@ -91,9 +110,25 @@ async def test_find_files_falls_back_to_find_when_index_empty():
             result = await files_mod.find_files("a.txt")
         assert "/home/jadon/a.txt" in result
         assert mock_to_thread.await_count == 1
+        args = mock_to_thread.await_args.args
+        assert args[0] is subprocess.run
+        find_cmd = args[1]
+        assert find_cmd[:4] == ["find", str(Path.home()), "-maxdepth", "8"]
     finally:
         files_mod._search_conn = None
         conn.close()
+
+
+@pytest.mark.asyncio
+async def test_find_files_fallback_handles_os_errors():
+    import tools.files as files_mod
+
+    files_mod._search_conn = None
+    with patch("tools.files.asyncio.to_thread", new=AsyncMock(side_effect=OSError("find unavailable"))):
+        result = await files_mod.find_files("todo")
+
+    assert "Search failed:" in result
+    assert "find unavailable" in result
 
 
 @pytest.mark.asyncio
@@ -118,6 +153,42 @@ async def test_move_file_blocks_outside_home():
 
 
 @pytest.mark.asyncio
+async def test_move_file_cancelled_when_not_confirmed_and_uses_full_paths_in_prompt():
+    from tools.files import move_file
+
+    with tempfile.NamedTemporaryFile(dir=Path.home(), suffix=".txt", delete=False) as f:
+        src = f.name
+    dst = str(Path.home() / "orion_move_destination.txt")
+
+    try:
+        with patch(
+            "safety.confirm.ask_file_action_confirmation",
+            new=AsyncMock(
+                return_value=_confirm_result(
+                    "denied",
+                    action="rename",
+                    source_path=src,
+                    destination_path=dst,
+                )
+            ),
+        ) as mock_confirm, \
+             patch("tools.files.shutil.move") as mock_move:
+            result = await move_file(src, dst)
+
+        assert "cancelled by user confirmation" in result
+        assert "from=" in result
+        assert "to=" in result
+        mock_move.assert_not_called()
+        mock_confirm.assert_awaited_once()
+        assert mock_confirm.await_args.args[0] == "rename"
+        kwargs = mock_confirm.await_args.kwargs
+        assert kwargs["source_path"] == src
+        assert kwargs["destination_path"] == dst
+    finally:
+        Path(src).unlink(missing_ok=True)
+
+
+@pytest.mark.asyncio
 async def test_delete_file_blocks_outside_home():
     from tools.files import delete_file
     result = await delete_file("/etc/passwd")
@@ -129,7 +200,10 @@ async def test_delete_file_not_found_returns_not_found():
     from tools.files import delete_file
 
     missing = str(Path.home() / "orion_missing_delete_target.txt")
-    with patch("safety.confirm.ask_confirmation", new=AsyncMock(return_value=True)) as mock_confirm, \
+    with patch(
+        "safety.confirm.ask_file_action_confirmation",
+        new=AsyncMock(return_value=_confirm_result("confirmed", action="delete", source_path=missing)),
+    ) as mock_confirm, \
          patch("tools.files.subprocess.run") as mock_run:
         result = await delete_file(missing)
 
@@ -145,12 +219,18 @@ async def test_delete_file_cancelled_when_not_confirmed():
     with tempfile.NamedTemporaryFile(dir=Path.home(), suffix=".txt", delete=False) as f:
         tmp_path = f.name
     try:
-        with patch("safety.confirm.ask_confirmation", new=AsyncMock(return_value=False)) as mock_confirm, \
+        with patch(
+            "safety.confirm.ask_file_action_confirmation",
+            new=AsyncMock(return_value=_confirm_result("denied", action="delete", source_path=tmp_path)),
+        ) as mock_confirm, \
              patch("tools.files.subprocess.run") as mock_run:
             result = await delete_file(tmp_path)
 
-        assert result == "Cancelled."
+        assert "File delete cancelled by user confirmation." in result
         mock_confirm.assert_awaited_once()
+        assert mock_confirm.await_args.args[0] == "delete"
+        kwargs = mock_confirm.await_args.kwargs
+        assert kwargs["source_path"] == tmp_path
         mock_run.assert_not_called()
     finally:
         Path(tmp_path).unlink(missing_ok=True)
@@ -163,7 +243,10 @@ async def test_delete_file_trashes_when_confirmed():
     with tempfile.NamedTemporaryFile(dir=Path.home(), suffix=".txt", delete=False) as f:
         tmp_path = f.name
     try:
-        with patch("safety.confirm.ask_confirmation", new=AsyncMock(return_value=True)) as mock_confirm, \
+        with patch(
+            "safety.confirm.ask_file_action_confirmation",
+            new=AsyncMock(return_value=_confirm_result("confirmed", action="delete", source_path=tmp_path)),
+        ) as mock_confirm, \
              patch("tools.files.asyncio.to_thread", new=AsyncMock()) as mock_to_thread:
             result = await delete_file(tmp_path)
 

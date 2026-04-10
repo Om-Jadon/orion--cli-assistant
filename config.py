@@ -68,8 +68,6 @@ def _detect_provider(model_string: str | None) -> str:
 
 PROVIDER: str = _detect_provider(MODEL_STRING)
 
-THINK_OFF = {"think": False}   # passed with every request; /think toggles think=True at call site
-
 OLLAMA_BASE        = "http://localhost:11434/v1"   # OpenAI-compatible endpoint (used by openai SDK)
 OLLAMA_API_BASE    = "http://localhost:11434"       # Native Ollama API (used for embeddings, tags, generate)
 EMBED_MODEL        = "BAAI/bge-small-en-v1.5"  # fastembed local model, no Ollama needed

@@ -22,7 +22,7 @@ def test_extracts_name(conn):
     extract_and_store(conn, "my name is Alice")
     profile = get_user_profile(conn)
 
-    assert profile["name"] == "alice"
+    assert profile["name"] == "Alice"
 
 
 def test_extracts_role(conn):
@@ -63,7 +63,7 @@ def test_multiple_facts_in_one_message(conn):
     extract_and_store(conn, "my name is Bob and i'm a data scientist")
     profile = get_user_profile(conn)
 
-    assert profile["name"] == "bob"
+    assert profile["name"] == "Bob"
     assert profile["role"] == "data scientist"
 
 
@@ -75,7 +75,7 @@ def test_extracts_with_punctuation(conn):
     extract_and_store(conn, "My name is Charlie. I'm a teacher.")
     profile = get_user_profile(conn)
 
-    assert profile["name"] == "charlie"
+    assert profile["name"] == "Charlie"
     assert profile["role"] == "teacher"
 
 
@@ -87,7 +87,7 @@ def test_work_context_extraction(conn):
     extract_and_store(conn, "i work at Google")
     profile = get_user_profile(conn)
 
-    assert profile["context"] == "google"
+    assert profile["context"] == "Google"
 
 
 def test_study_context_extraction(conn):
@@ -98,7 +98,7 @@ def test_study_context_extraction(conn):
     extract_and_store(conn, "i study in Germany")
     profile = get_user_profile(conn)
 
-    assert profile["context"] == "germany"
+    assert profile["context"] == "Germany"
 
 
 def test_case_insensitivity(conn):
@@ -109,4 +109,14 @@ def test_case_insensitivity(conn):
     extract_and_store(conn, "MY NAME IS DIANA")
     profile = get_user_profile(conn)
 
-    assert profile["name"] == "diana"
+    assert profile["name"] == "DIANA"
+
+
+def test_generic_fact_preserves_value_casing(conn):
+    from memory.extractor import extract_and_store
+    from memory.store import get_user_profile
+
+    extract_and_store(conn, "my favorite language is TypeScript")
+    profile = get_user_profile(conn)
+
+    assert profile["favorite language"] == "TypeScript"

@@ -28,5 +28,5 @@ def build_session() -> PromptSession:
 def get_prompt_text() -> HTML:
     return HTML('<ansiblue>❯</ansiblue> ')
 
-async def get_input(session: PromptSession, model: str = "") -> str:
+async def get_input(session: PromptSession) -> str:
     return await session.prompt_async(get_prompt_text())

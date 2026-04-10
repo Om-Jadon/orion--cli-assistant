@@ -32,6 +32,15 @@ def _log_operation(operation: str, source: str, destination: str):
         pass
 
 
+def _classify_move_action(src: str, dst: str) -> str:
+    dst_path = Path(dst)
+    if dst_path.exists() and dst_path.is_dir():
+        return "move"
+    if Path(src).parent == dst_path.parent:
+        return "rename"
+    return "move"
+
+
 async def find_files(query: str) -> str:
     """
     Search for files matching a name or keyword pattern.
@@ -51,7 +60,7 @@ async def find_files(query: str) -> str:
                    LIMIT 10""",
                 (pattern, pattern),
             ).fetchall()
-            indexed = [row["path"] if isinstance(row, sqlite3.Row) else row[0] for row in rows]
+            indexed = [row["path"] for row in rows]
             if indexed:
                 return "\n".join(indexed)
         except sqlite3.Error as e:
@@ -60,7 +69,7 @@ async def find_files(query: str) -> str:
     try:
         out = await asyncio.to_thread(
             subprocess.run,
-            ["find", str(HOME), "-iname", f"*{query}*", "-not", "-path", "*/.*", "-maxdepth", "8"],
+            ["find", str(HOME), "-maxdepth", "8", "-not", "-path", "*/.*", "-iname", f"*{query}*"],
             capture_output=True,
             text=True,
             timeout=5,
@@ -68,6 +77,8 @@ async def find_files(query: str) -> str:
         results = [r for r in out.stdout.strip().split("\n") if r][:10]
     except subprocess.TimeoutExpired:
         return "Search timed out. Try being more specific."
+    except Exception as e:
+        return f"Search failed: {e}"
     return "\n".join(results) or f"No files found matching '{query}'"
 
 
@@ -138,17 +149,32 @@ async def move_file(source: str, destination: str) -> str:
     ok, dst = validate_path(destination)
     if not ok:
         return dst
+    action = _classify_move_action(src, dst)
+    confirmed = await confirm.ask_file_action_confirmation(
+        action,
+        source_path=src,
+        destination_path=dst,
+    )
+    if not confirmed.confirmed:
+        if confirmed.repeated_denial:
+            return (
+                f"File {action} cancelled. Confirmation was already denied for this exact action in this turn. "
+                f"from={src}; to={dst}"
+            )
+        return (
+            f"File {action} cancelled by user confirmation. from={src}; to={dst}"
+        )
     try:
         moved_to = shutil.move(src, dst)
         _log_operation("move", src, str(moved_to))
-        return f"Moved {Path(src).name} → {moved_to}"
+        return f"Moved {Path(src).name} -> {moved_to}"
     except Exception as e:
         return f"Error moving file: {e}"
 
 
 async def delete_file(path: str) -> str:
     """
-    Permanently delete a file by moving it to the trash.
+    Delete a file by moving it to the trash.
 
     Args:
         path: The absolute or home-relative path of the file to delete.
@@ -158,9 +184,19 @@ async def delete_file(path: str) -> str:
         return resolved
     if not Path(resolved).exists():
         return f"Not found: {path}."
-    confirmed = await confirm.ask_confirmation(f"Move to trash: {Path(resolved).name}?")
-    if not confirmed:
-        return "Cancelled."
+    confirmed = await confirm.ask_file_action_confirmation(
+        "delete",
+        source_path=resolved,
+    )
+    if not confirmed.confirmed:
+        if confirmed.repeated_denial:
+            return (
+                "File delete cancelled. Confirmation was already denied for this exact action in this turn. "
+                f"path={resolved}"
+            )
+        return (
+            f"File delete cancelled by user confirmation. path={resolved}"
+        )
     await asyncio.to_thread(subprocess.run, ["gio", "trash", resolved])
     _log_operation("delete", resolved, "trash")
     return f"Moved to trash: {Path(resolved).name}"

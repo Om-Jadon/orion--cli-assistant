@@ -5,6 +5,7 @@
 Orion is a Linux-first CLI AI assistant designed for practical local and cloud-assisted workflows.
 
 Primary goals:
+
 - Natural-language command and assistance from the terminal.
 - Tool-using agent behavior for files, shell, browsing, web search, and media lookup.
 - Long-term memory and retrieval over conversation and indexed file metadata.
@@ -23,6 +24,7 @@ cat build.log | orion "summarize errors"
 ## Current Status
 
 All planned stages are implemented (Stage 1 through Stage 7), including the follow-up quality refactors:
+
 - Delete safety existence checks.
 - Indexed file search with fallback behavior.
 - Async offloading for blocking subprocess calls.
@@ -34,37 +36,45 @@ All planned stages are implemented (Stage 1 through Stage 7), including the foll
 ## Core Stack
 
 Language/runtime:
+
 - Python 3.13+
 
 Agent and model layer:
+
 - pydantic-ai
 - openai SDK compatibility path for Ollama endpoint
 
 Terminal UX:
+
 - rich
 - prompt-toolkit
 
 Storage and retrieval:
+
 - sqlite3
 - sqlite-vec
 - FTS5 (SQLite virtual table)
 - fastembed
 
 Web and media:
+
 - ddgs (DuckDuckGo search)
 - trafilatura (content extraction)
 - playwright (JavaScript-rendered fallback extraction)
 
 Networking/utilities:
+
 - httpx
 
 Testing:
+
 - pytest
 - pytest-asyncio
 
 ## Dependency Inventory and Usage
 
 Runtime dependencies in pyproject.toml:
+
 - ddgs: web search (tools/search.py)
 - fastembed: local embeddings (memory/embeddings.py)
 - httpx: provider and startup connectivity checks (ui/startup.py)
@@ -77,19 +87,23 @@ Runtime dependencies in pyproject.toml:
 - trafilatura: page text extraction (tools/browser.py)
 
 Dev dependencies:
+
 - pytest
 - pytest-asyncio
 
 ## Runtime Configuration and Data
 
 Configured in config.py and ~/.orion/config.toml:
+
 - Model defaults and optional model_string override.
 - Provider detection (ollama/openai/anthropic/gemini/groq/mistral).
 - API key variable mapping for cloud providers.
 - Context budget constants.
 - Embedding model and dimensions.
+- Embedding model and vec schema dimension are sourced from `EMBED_MODEL` and `EMBED_DIM`.
 
 Runtime files under ~/.orion:
+
 - memory.db: SQLite database (conversation, profile, index, vector metadata).
 - history: prompt_toolkit command history.
 - config.toml: user overrides.
@@ -100,26 +114,32 @@ Runtime files under ~/.orion:
 ### 1) Application Entry and Routing
 
 main.py handles process mode routing:
+
 - --init mode: performs home index scan.
 - One-shot mode: executes direct prompt from CLI args.
 - Pipe mode: reads stdin and queries model with injected input block.
 - Interactive mode: startup UI, prewarm, session loop, slash command dispatch.
 
 It also initializes:
+
 - logging to ~/.orion/debug.log
-- shared DB connection
+- foreground DB connection for interactive operations
+- dedicated background-scan DB connection lifecycle
 - file tool DB connection injection
 
 ### 2) Agent Layer
 
 core/agent.py builds the agent with provider-aware model configuration:
+
 - Ollama path: OpenAIChatModel with local endpoint and think/keep_alive extra_body.
 - Cloud path: provider-routed model string.
 
 Tool registration is centralized in build_agent and includes:
+
 - files, shell, browser, search, media tools.
 
 System prompt enforces:
+
 - direct answers when no tool is needed,
 - safe tool usage expectations,
 - anti-literal tool-call output constraints.
@@ -127,16 +147,19 @@ System prompt enforces:
 ### 3) Streaming and Interaction
 
 core/streaming.py:
+
 - Streams token deltas live to UI.
 - Handles retries for provider/tool-call formatting failure patterns.
 - Detects leaked textual tool-call markup and retries with corrective hinting.
 
 ui/renderer.py, ui/spinner.py, ui/input.py:
+
 - Rich markdown streaming and styled rendering.
 - Async spinner status updates.
 - Prompt session and keybindings.
 
 ui/slash.py:
+
 - Slash command router and handlers.
 - RuntimeState container for think_mode, agent instance, session_id.
 - Commands: /help /think /clear /undo /history /memory /scan /exit /quit.
@@ -144,10 +167,13 @@ ui/slash.py:
 ### 4) Memory Layer
 
 memory/db.py:
+
 - Opens SQLite connection with WAL and sqlite-vec.
 - Applies schema migrations (tables + virtual tables).
+- Vec schema dimension is sourced from config (`EMBED_DIM`).
 
 Schema includes:
+
 - conversations
 - user_profile
 - files
@@ -157,26 +183,33 @@ Schema includes:
 - vec_meta
 
 memory/store.py:
+
 - Conversation persistence.
 - Profile upsert/read.
 - Operation log write/read for undo.
 
 memory/embeddings.py:
+
 - Embedding generation via fastembed.
+- Embedding model is sourced from config (`EMBED_MODEL`).
 - Float serialization for vector storage.
 
 memory/retrieval.py:
+
 - Hybrid retrieval via reciprocal rank fusion of FTS + vector results.
 - Structured debug logging on query failures.
 
 memory/indexer.py:
+
 - Incremental home-directory metadata scan.
 - Extension filtering and inferred tags.
 
 memory/extractor.py:
+
 - Extracts user-profile facts from turns into user_profile store.
 
 core/context.py assembles three-tier context for each turn:
+
 - profile facts,
 - recent conversation,
 - semantic retrieval snippets.
@@ -184,53 +217,63 @@ core/context.py assembles three-tier context for each turn:
 ### 5) Tools Layer
 
 tools/files.py:
-- find_files: SQLite index lookup first, fallback to find command.
+
+- find_files: SQLite index lookup first, fallback to `find` with maxdepth-first ordering and safe error fallback.
 - list_directory: bounded output with truncation notice.
 - read_file/open_file/move_file/delete_file.
 - delete_file has path validation, existence check, confirmation, async trash call.
 - operation logging for undo and shared connection injection hook.
 
 tools/shell.py:
+
 - Command execution with blocked root/danger checks.
 - subprocess execution offloaded via asyncio.to_thread.
 
 tools/browser.py:
+
 - open_url for links/local files.
 - fetch_page two-tier extraction (trafilatura, then playwright fallback).
 - offline guard and debug logging on tier-1 failures.
 
 tools/search.py:
+
 - DuckDuckGo-backed web search (formatted and raw variants).
 
 tools/media.py:
+
 - site-filtered media lookup with watch-URL preference and browser open.
 
 ### 6) Safety Layer
 
 safety/boundaries.py:
+
 - Path restrictions to HOME.
 - sudo/root command blocking.
 - dangerous shell pattern checks.
 
 safety/confirm.py:
+
 - Async interactive confirmation prompt.
 - destructive keyword detection helper.
 
 ## Implemented Feature Set
 
 ### Inference and Providers
+
 - Local Ollama support via OpenAI-compatible endpoint.
 - Cloud provider routing via model_string.
 - Think mode toggling (where applicable).
 - Startup prewarm path.
 
 ### CLI Modes
+
 - Init scan mode: --init.
 - One-shot prompt mode.
 - Pipe/stdin analysis mode.
 - Interactive REPL mode with history and slash commands.
 
 ### Slash Commands
+
 - /help
 - /think
 - /clear
@@ -241,23 +284,27 @@ safety/confirm.py:
 - /exit and /quit
 
 ### Web and Media
+
 - Web search with capped result count.
 - Web page extraction with JS fallback.
 - Media search/open with site filtering.
 
 ### Memory and Retrieval
+
 - Conversation persistence per session.
 - User profile extraction and recall.
 - Indexed file metadata scan and search.
 - Hybrid semantic retrieval for contextual responses.
 
 ### Safety and Guardrails
+
 - Home-bound path enforcement.
 - Privileged command blocking.
 - Dangerous shell pattern filtering.
 - Destructive action confirmation.
 
 ### Logging and Diagnostics
+
 - Structured module-level debug logging.
 - Unified file sink: ~/.orion/debug.log.
 
@@ -332,6 +379,7 @@ cli-assistant/
 ## Quality and Verification
 
 Test suite coverage includes:
+
 - configuration,
 - startup checks,
 - rendering/spinner,
@@ -343,11 +391,13 @@ Test suite coverage includes:
 - CLI mode routing integration.
 
 Current verification state:
+
 - Full test suite passing.
 
 ## Notes for Future Development
 
 Recommended extension points:
+
 - Add new slash commands in ui/slash.py.
 - Add new tool modules and register in core/agent.py.
 - Extend schema in memory/db.py and wire through memory/store.py and retrieval paths.

@@ -18,10 +18,9 @@ def test_default_model():
     assert config.EMBED_MODEL == "BAAI/bge-small-en-v1.5"
 
 
-def test_think_off_is_dict():
+def test_legacy_think_off_constant_removed():
     import config
-    assert isinstance(config.THINK_OFF, dict)
-    assert config.THINK_OFF.get("think") is False
+    assert not hasattr(config, "THINK_OFF")
 
 
 def test_default_theme_and_width():

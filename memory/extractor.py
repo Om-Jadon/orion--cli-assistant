@@ -16,10 +16,10 @@ def extract_and_store(conn: sqlite3.Connection, user_text: str):
     Run after each user turn. Extract facts and upsert into user_profile.
     Lightweight regex — no LLM call needed.
     """
-    text = user_text.lower().strip()
+    text = user_text.strip()
 
     for pattern, key in FACT_PATTERNS:
-        m = re.search(pattern, text)
+        m = re.search(pattern, text, flags=re.IGNORECASE)
         if not m:
             continue
 
@@ -28,4 +28,4 @@ def extract_and_store(conn: sqlite3.Connection, user_text: str):
         else:
             # Generic "my X is Y"
             if len(m.groups()) >= 2:
-                upsert_profile(conn, m.group(1).strip(), m.group(2).strip(), confidence=0.7)
+                upsert_profile(conn, m.group(1).strip().lower(), m.group(2).strip(), confidence=0.7)

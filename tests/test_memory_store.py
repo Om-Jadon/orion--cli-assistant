@@ -51,6 +51,18 @@ def test_recent_turns_token_limit(conn):
     assert len(lines) < 20
 
 
+def test_recent_turns_does_not_undercount_long_url_like_content(conn):
+    from memory.store import save_turn, get_recent_turns
+
+    # No-whitespace content used to be severely undercounted by split() word counting.
+    long_url_like = "https://example.com/" + ("segment-" * 80)
+    save_turn(conn, "s3", "user", long_url_like)
+
+    # A realistic token budget should treat this as large enough to exceed 10 tokens.
+    result = get_recent_turns(conn, "s3", max_tokens=10)
+    assert result == ""
+
+
 def test_upsert_profile_insert_and_update(conn):
     from memory.store import upsert_profile, get_user_profile
 
