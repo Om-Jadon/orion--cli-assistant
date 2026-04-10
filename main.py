@@ -10,7 +10,7 @@ from core.context import build_context
 from memory.db import get_connection
 from memory.store import save_turn
 from memory.extractor import extract_and_store
-from config import MODEL
+from config import MODEL, MODEL_STRING
 
 think_mode = False
 agent = build_agent(think=think_mode)
@@ -43,7 +43,8 @@ async def main():
         console.print("[success]Done.[/success]")
         return
 
-    show_startup(console, MODEL)
+    display_model = MODEL_STRING or MODEL
+    show_startup(console, display_model)
     await prewarm_model(MODEL)
     session = build_session()
 
@@ -82,8 +83,20 @@ async def run_once(query: str):
 
 
 async def handle_slash(cmd: str):
-    # Slash commands wired fully in Stage 7
-    console.print(f"[dim]{cmd} — slash commands active in Stage 7[/dim]")
+    parts = cmd.strip().split()
+    command = parts[0].lower()
+
+    if command == "/help":
+        console.print()
+        console.print("  [accent]Slash commands[/accent]")
+        console.print()
+        console.print("  [dim]/help[/dim]       show this message")
+        console.print("  [dim]/think[/dim]      toggle chain-of-thought reasoning")
+        console.print("  [dim]/clear[/dim]      clear conversation history")
+        console.print("  [dim]/exit[/dim]       quit orion")
+        console.print()
+    else:
+        console.print(f"[dim]Unknown command: {cmd}. Type /help for available commands.[/dim]")
 
 
 if __name__ == "__main__":
