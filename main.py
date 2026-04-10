@@ -39,7 +39,7 @@ async def main():
     if "--init" in sys.argv:
         from memory.indexer import scan_home
         console.print("[accent]Building file index...[/accent]")
-        scan_home(conn, verbose=True)
+        await asyncio.to_thread(scan_home, conn, True)
         console.print("[success]Done.[/success]")
         return
 
@@ -47,6 +47,9 @@ async def main():
     show_startup(console, display_model)
     await prewarm_model(MODEL)
     session = build_session()
+
+    from memory.indexer import scan_home
+    asyncio.create_task(asyncio.to_thread(scan_home, conn))
 
     while True:
         try:

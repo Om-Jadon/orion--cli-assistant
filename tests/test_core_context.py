@@ -87,24 +87,25 @@ async def test_recent_turns_included():
 
 
 @pytest.mark.asyncio
-async def test_retrieval_not_triggered_for_simple_query():
+async def test_retrieval_always_called():
     from core.context import build_context
 
     conn = make_conn()
-    with patch("core.context.hybrid_search", new=AsyncMock()) as mock_search:
-        await build_context(conn, "what is python?", session_id="s1")
-        mock_search.assert_not_called()
+    with patch("core.context.hybrid_search", new=AsyncMock(return_value=[])) as mock_search:
+        result = await build_context(conn, "what is python?", session_id="s1")
+        mock_search.assert_called_once()
+    assert "RELEVANT MEMORY:" not in result
     conn.close()
 
 
 @pytest.mark.asyncio
-async def test_retrieval_triggered_for_recall_query():
+async def test_retrieval_injected_when_results_exist():
     from core.context import build_context
 
     conn = make_conn()
     mock_results = [{"content": "We discussed Python yesterday", "source": "test"}]
     with patch("core.context.hybrid_search", new=AsyncMock(return_value=mock_results)):
-        result = await build_context(conn, "do you remember what I said?", session_id="s1")
+        result = await build_context(conn, "what is python?", session_id="s1")
     assert "RELEVANT MEMORY:" in result
     assert "We discussed Python yesterday" in result
     conn.close()

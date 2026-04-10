@@ -1,15 +1,7 @@
 import sqlite3
 from memory.embeddings import embed, serialize
 
-RECALL_SIGNALS = [
-    "remember", "earlier", "yesterday", "last time",
-    "you said", "i told you", "we discussed",
-    " it ", " that ", " the one", " my "
-]
-
-def should_retrieve(query: str) -> bool:
-    q = query.lower()
-    return any(signal in q for signal in RECALL_SIGNALS)
+MIN_RRF_SCORE = 0.01  # minimum combined RRF score to include a result
 
 def _fts_escape(query: str) -> str:
     """Wrap query in double quotes for FTS5 to treat it as a phrase, escaping internal quotes."""
@@ -48,7 +40,10 @@ async def hybrid_search(conn: sqlite3.Connection, query: str, k: int = 5) -> lis
     for rank, row in enumerate(vec_results):
         rrf_scores[row["rowid"]] = rrf_scores.get(row["rowid"], 0) + 1 / (RRF_K + rank + 1)
 
-    top_ids = sorted(rrf_scores, key=lambda r: rrf_scores[r], reverse=True)[:k]
+    top_ids = [
+        r for r in sorted(rrf_scores, key=lambda r: rrf_scores[r], reverse=True)[:k]
+        if rrf_scores[r] >= MIN_RRF_SCORE
+    ]
 
     results = []
     for rowid in top_ids:

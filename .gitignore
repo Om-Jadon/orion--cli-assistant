@@ -9,8 +9,10 @@ dist/
 .env.*
 .python-version
 .claude/
+.agents/
 
 ideas.md
 docs/
 docs/*
 CLAUDE.md
+.impeccable.md

@@ -1,3 +1,4 @@
+import asyncio
 import struct
 from fastembed import TextEmbedding
 from config import EMBED_DIM
@@ -13,7 +14,7 @@ def _get_model() -> TextEmbedding:
 
 async def embed(text: str) -> list[float]:
     model = _get_model()
-    vector = next(model.embed([text]))
+    vector = await asyncio.to_thread(lambda: next(model.embed([text])))
     return vector[:EMBED_DIM].tolist()
 
 

@@ -35,16 +35,6 @@ def make_in_memory_conn() -> sqlite3.Connection:
     return conn
 
 
-def test_should_retrieve_true():
-    from memory.retrieval import should_retrieve
-    assert should_retrieve("do you remember what I said?") is True
-
-
-def test_should_retrieve_false():
-    from memory.retrieval import should_retrieve
-    assert should_retrieve("what is python?") is False
-
-
 @pytest.mark.asyncio
 async def test_hybrid_search_returns_results():
     from memory.retrieval import hybrid_search
