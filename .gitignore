@@ -7,3 +7,10 @@ __pycache__/
 dist/
 .env
 .env.*
+.python-version
+.claude/
+
+ideas.md
+docs/
+docs/*
+CLAUDE.md

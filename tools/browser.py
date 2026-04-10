@@ -43,8 +43,8 @@ async def fetch_page(url: str) -> str:
 
 def _is_online() -> bool:
     try:
-        socket.setdefaulttimeout(2)
-        socket.create_connection(("8.8.8.8", 53))
+        with socket.create_connection(("8.8.8.8", 53), timeout=2):
+            pass
         return True
     except OSError:
         return False
