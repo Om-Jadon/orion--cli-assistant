@@ -3,7 +3,7 @@ import pytest
 
 def test_mocha_theme_has_required_keys():
     from ui.renderer import MOCHA
-    required = {"user", "assistant", "dim", "thinking", "success", "warning", "error", "accent", "border", "muted"}
+    required = {"user", "assistant", "orion", "dim", "thinking", "success", "warning", "error", "accent", "border", "muted"}
     assert required.issubset(set(MOCHA.styles.keys()))
 
 
