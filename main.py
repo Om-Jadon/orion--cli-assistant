@@ -96,7 +96,7 @@ async def handle_slash(cmd: str):
         console.print("  [dim]/exit[/dim]       quit orion")
         console.print()
     else:
-        console.print(f"[dim]Unknown command: {cmd}. Type /help for available commands.[/dim]")
+        console.print(f"[error]Unknown command:[/error] {cmd}. Type /help for available commands.")
 
 
 if __name__ == "__main__":
