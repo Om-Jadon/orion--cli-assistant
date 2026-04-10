@@ -29,23 +29,6 @@ async def test_main_pipe_mode_calls_streaming():
 
 
 @pytest.mark.asyncio
-async def test_main_init_mode_runs_scan_and_prints_done():
-    lines = []
-
-    def _capture(*args, **kwargs):
-        lines.append(" ".join(str(a) for a in args))
-
-    with patch.object(main.sys, "argv", ["orion", "--init"]), \
-         patch("memory.indexer.scan_home") as mock_scan_home, \
-         patch("main.asyncio.to_thread", new=AsyncMock(side_effect=lambda fn, *a: fn(*a))), \
-         patch("main.console.print", side_effect=_capture):
-        await main.main()
-
-    mock_scan_home.assert_called_once()
-    assert any("Done" in line for line in lines)
-
-
-@pytest.mark.asyncio
 async def test_run_once_resets_confirmation_turn_state_before_agent_run():
     with patch("main.safety_confirm.reset_turn_state") as mock_reset, \
          patch("main.print_user"), \

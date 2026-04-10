@@ -48,14 +48,6 @@ def _on_background_scan_done(task: asyncio.Task):
 
 
 async def main():
-    if "--init" in sys.argv:
-        from memory.indexer import scan_home
-
-        console.print("[accent]Building file index...[/accent]")
-        await asyncio.to_thread(scan_home, conn, True)
-        console.print("[success]Done.[/success]")
-        return
-
     # One-shot: orion open the latest markiplier video
     if len(sys.argv) > 1 and sys.stdin.isatty():
         query = " ".join(sys.argv[1:])

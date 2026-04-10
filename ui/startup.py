@@ -39,8 +39,8 @@ def show_startup(console: Console, model: str):
         index_ok = _check_index()
         checks = [
             ("ollama", ollama_ok, "connected" if ollama_ok else "offline"),
-            ("memory", db_ok,     "active" if db_ok else "run --init"),
-            ("index",  index_ok,  f"{_index_count():,} files" if index_ok else "run --init"),
+            ("memory", db_ok,     "active" if db_ok else "run /scan"),
+            ("index",  index_ok,  f"{_index_count():,} files" if index_ok else "run /scan"),
         ]
     else:
         api_ok = _check_api_key(PROVIDER)
@@ -48,8 +48,8 @@ def show_startup(console: Console, model: str):
         index_ok = _check_index()
         checks = [
             (PROVIDER, api_ok,   "ready" if api_ok else "missing"),
-            ("memory", db_ok,    "active" if db_ok else "run --init"),
-            ("index",  index_ok, f"{_index_count():,} files" if index_ok else "run --init"),
+            ("memory", db_ok,    "active" if db_ok else "run /scan"),
+            ("index",  index_ok, f"{_index_count():,} files" if index_ok else "run /scan"),
         ]
 
     for name, ok, status_text in checks:

@@ -35,7 +35,7 @@ It supports both local inference (Ollama) and cloud providers (OpenAI, Anthropic
 The runtime is split into focused layers:
 
 - Entry and orchestration:
-  - main.py routes init, one-shot, pipe, and interactive modes, with a dedicated background scan connection
+  - main.py routes one-shot, pipe, and interactive modes, with a dedicated background scan connection
 - Agent core:
   - core/agent.py builds a provider-aware PydanticAI agent and registers tools
   - core/streaming.py handles streaming and retry logic
@@ -109,10 +109,11 @@ ollama pull qwen3:4b
 
 Note: The project currently uses fastembed for embeddings, so no Ollama embedding model is required.
 
-1. Build initial file index
+1. Build or refresh the file index
 
 ```bash
-uv run main.py --init
+uv run main.py
+# then run /scan inside Orion
 ```
 
 ## Running Orion

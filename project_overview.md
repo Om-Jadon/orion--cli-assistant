@@ -115,7 +115,6 @@ Runtime files under ~/.orion:
 
 main.py handles process mode routing:
 
-- --init mode: performs home index scan.
 - One-shot mode: executes direct prompt from CLI args.
 - Pipe mode: reads stdin and queries model with injected input block.
 - Interactive mode: startup UI, prewarm, session loop, slash command dispatch.
@@ -267,7 +266,6 @@ safety/confirm.py:
 
 ### CLI Modes
 
-- Init scan mode: --init.
 - One-shot prompt mode.
 - Pipe/stdin analysis mode.
 - Interactive REPL mode with history and slash commands.
