@@ -104,7 +104,8 @@ async def handle_slash(cmd: str):
         think_mode = not think_mode
         agent = build_agent(think=think_mode)
         state = "on" if think_mode else "off"
-        console.print(f"[dim]Think mode {state}.[/dim]")
+        tag = "success" if think_mode else "warning"
+        console.print(f"[{tag}]Think mode {state}.[/{tag}]")
     else:
         console.print(f"[error]Unknown command:[/error] {cmd}. Type /help for available commands.")
 

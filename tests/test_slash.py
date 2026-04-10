@@ -60,6 +60,7 @@ async def test_clear_resets_session_id():
 
 @pytest.mark.asyncio
 async def test_think_toggles_mode_on():
+    original_agent = main.agent
     main.think_mode = False
     printed = []
     try:
@@ -75,11 +76,12 @@ async def test_think_toggles_mode_on():
         assert any("on" in str(line).lower() for line in printed)
     finally:
         main.think_mode = False
-        main.agent = mock_build.return_value  # leave agent as mock; next test resets too
+        main.agent = original_agent
 
 
 @pytest.mark.asyncio
 async def test_think_toggles_mode_off():
+    original_agent = main.agent
     main.think_mode = True
     printed = []
     try:
@@ -95,3 +97,4 @@ async def test_think_toggles_mode_off():
         assert any("off" in str(line).lower() for line in printed)
     finally:
         main.think_mode = False
+        main.agent = original_agent
