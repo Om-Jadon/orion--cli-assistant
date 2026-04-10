@@ -41,6 +41,14 @@ async def test_fetch_page_truncates():
     assert len(result) <= 4000
 
 
+async def test_fetch_page_fetch_error():
+    with patch("tools.browser._is_online", return_value=True), \
+         patch("trafilatura.fetch_url", side_effect=Exception("Network error")):
+        result = await fetch_page("https://example.com")
+    assert "Error fetching" in result
+    assert "https://example.com" in result
+
+
 async def test_open_url_still_works():
     with tempfile.NamedTemporaryFile(dir=Path.home(), suffix=".txt", delete=False) as f:
         tmp_path = f.name
