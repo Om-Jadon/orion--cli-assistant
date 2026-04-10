@@ -2,6 +2,7 @@ import shutil
 import subprocess
 from pathlib import Path
 from safety.boundaries import validate_path
+from safety import confirm
 
 HOME = Path.home()
 
@@ -108,5 +109,8 @@ async def delete_file(path: str) -> str:
     ok, resolved = validate_path(path)
     if not ok:
         return resolved
+    confirmed = await confirm.ask_confirmation(f"Move to trash: {Path(resolved).name}?")
+    if not confirmed:
+        return "Cancelled."
     subprocess.run(["gio", "trash", resolved])
     return f"Moved to trash: {Path(resolved).name}"

@@ -1,5 +1,7 @@
 import pytest
 from pathlib import Path
+import tempfile
+from unittest.mock import AsyncMock, patch
 
 
 @pytest.mark.asyncio
@@ -57,3 +59,39 @@ async def test_delete_file_blocks_outside_home():
     from tools.files import delete_file
     result = await delete_file("/etc/passwd")
     assert "Blocked" in result
+
+
+@pytest.mark.asyncio
+async def test_delete_file_cancelled_when_not_confirmed():
+    from tools.files import delete_file
+
+    with tempfile.NamedTemporaryFile(dir=Path.home(), suffix=".txt", delete=False) as f:
+        tmp_path = f.name
+    try:
+        with patch("safety.confirm.ask_confirmation", new=AsyncMock(return_value=False)) as mock_confirm, \
+             patch("tools.files.subprocess.run") as mock_run:
+            result = await delete_file(tmp_path)
+
+        assert result == "Cancelled."
+        mock_confirm.assert_awaited_once()
+        mock_run.assert_not_called()
+    finally:
+        Path(tmp_path).unlink(missing_ok=True)
+
+
+@pytest.mark.asyncio
+async def test_delete_file_trashes_when_confirmed():
+    from tools.files import delete_file
+
+    with tempfile.NamedTemporaryFile(dir=Path.home(), suffix=".txt", delete=False) as f:
+        tmp_path = f.name
+    try:
+        with patch("safety.confirm.ask_confirmation", new=AsyncMock(return_value=True)) as mock_confirm, \
+             patch("tools.files.subprocess.run") as mock_run:
+            result = await delete_file(tmp_path)
+
+        assert "Moved to trash:" in result
+        mock_confirm.assert_awaited_once()
+        mock_run.assert_called_once()
+    finally:
+        Path(tmp_path).unlink(missing_ok=True)
