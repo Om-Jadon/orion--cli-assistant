@@ -1,7 +1,7 @@
 import sqlite3
 from memory.store import get_recent_turns, get_user_profile
 from memory.retrieval import hybrid_search, should_retrieve
-from config import CONTEXT_PROFILE, CONTEXT_RECENT, CONTEXT_RETRIEVED
+from config import CONTEXT_RECENT
 
 
 async def build_context(conn: sqlite3.Connection, query: str, session_id: str) -> str:
