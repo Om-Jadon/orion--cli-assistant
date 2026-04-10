@@ -1,12 +1,16 @@
 import os
+import time
+import inspect
+import functools
 from pathlib import Path
 from pydantic_ai import Agent
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
 from config import OLLAMA_BASE, MODEL, MODEL_STRING, PROVIDER, KEEP_ALIVE_ACTIVE
+from core import trace_logging as trace_logging
 
 
-def build_agent(think: bool = False) -> Agent:
+def build_agent(think: bool = False, model_string_override: str | None = None) -> Agent:
     """
     Build a PydanticAI agent for the configured provider.
 
@@ -19,7 +23,10 @@ def build_agent(think: bool = False) -> Agent:
         PydanticAI handles provider routing and reads the API key from env.
         think=True is silently ignored (cloud models don't support it).
     """
-    if PROVIDER == "ollama":
+    selected_model_string = model_string_override or MODEL_STRING
+    use_cloud_path = PROVIDER != "ollama" or model_string_override is not None
+
+    if not use_cloud_path:
         model = OpenAIChatModel(
             MODEL,
             provider=OpenAIProvider(
@@ -40,8 +47,10 @@ def build_agent(think: bool = False) -> Agent:
     else:
         # Cloud: PydanticAI resolves the provider from the model string prefix.
         # e.g. "openai:gpt-4o", "anthropic:claude-sonnet-4-5", "gemini-2.0-flash"
+        if not selected_model_string:
+            raise ValueError("Cloud agent build requires a model string.")
         agent = Agent(
-            MODEL_STRING,
+            selected_model_string,
             system_prompt=_build_system_prompt(),
             model_settings={"parallel_tool_calls": False},
         )
@@ -53,7 +62,7 @@ def build_agent(think: bool = False) -> Agent:
     from tools.media import open_media
 
     for tool in [find_files, list_directory, read_file, open_file, move_file, delete_file, run_shell, open_url, fetch_page, web_search, open_media]:
-        agent.tool_plain(tool)
+        agent.tool_plain(_wrap_tool_for_trace(tool))
 
     return agent
 
@@ -99,3 +108,70 @@ RULES:
 - Respond in plain Markdown. No HTML.
 - For web research, use web_search first then fetch_page for detail.
 """
+
+
+def _wrap_tool_for_trace(tool):
+    if inspect.iscoroutinefunction(tool):
+        @functools.wraps(tool)
+        async def _wrapped(*args, **kwargs):
+            tool_call_id = trace_logging.log_tool_call_start(
+                tool_name=tool.__name__,
+                args=args,
+                kwargs=kwargs,
+            )
+            started = time.perf_counter()
+            try:
+                result = await tool(*args, **kwargs)
+                elapsed_ms = int((time.perf_counter() - started) * 1000)
+                trace_logging.log_tool_call_end(
+                    tool_call_id=tool_call_id,
+                    tool_name=tool.__name__,
+                    status="ok",
+                    result=result,
+                    elapsed_ms=elapsed_ms,
+                )
+                return result
+            except Exception as e:
+                elapsed_ms = int((time.perf_counter() - started) * 1000)
+                trace_logging.log_tool_call_end(
+                    tool_call_id=tool_call_id,
+                    tool_name=tool.__name__,
+                    status="error",
+                    error=str(e),
+                    elapsed_ms=elapsed_ms,
+                )
+                raise
+
+        return _wrapped
+
+    @functools.wraps(tool)
+    def _wrapped_sync(*args, **kwargs):
+        tool_call_id = trace_logging.log_tool_call_start(
+            tool_name=tool.__name__,
+            args=args,
+            kwargs=kwargs,
+        )
+        started = time.perf_counter()
+        try:
+            result = tool(*args, **kwargs)
+            elapsed_ms = int((time.perf_counter() - started) * 1000)
+            trace_logging.log_tool_call_end(
+                tool_call_id=tool_call_id,
+                tool_name=tool.__name__,
+                status="ok",
+                result=result,
+                elapsed_ms=elapsed_ms,
+            )
+            return result
+        except Exception as e:
+            elapsed_ms = int((time.perf_counter() - started) * 1000)
+            trace_logging.log_tool_call_end(
+                tool_call_id=tool_call_id,
+                tool_name=tool.__name__,
+                status="error",
+                error=str(e),
+                elapsed_ms=elapsed_ms,
+            )
+            raise
+
+    return _wrapped_sync

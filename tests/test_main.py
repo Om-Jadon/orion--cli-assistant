@@ -13,7 +13,7 @@ async def test_main_one_shot_mode_calls_run_once():
          patch("main.run_once", new=AsyncMock()) as mock_run_once:
         await main.main()
 
-    mock_run_once.assert_awaited_once_with("hello")
+    mock_run_once.assert_awaited_once_with("hello", mode="oneshot")
 
 
 @pytest.mark.asyncio
@@ -56,6 +56,24 @@ async def test_run_once_resets_confirmation_turn_state_before_agent_run():
         await main.run_once("delete ~/Downloads/hi.txt")
 
     mock_reset.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_run_once_emits_trace_turn_start_and_end():
+    with patch("main.trace_logging.start_turn") as mock_turn_start, \
+         patch("main.trace_logging.end_turn") as mock_turn_end, \
+         patch("main.safety_confirm.reset_turn_state"), \
+         patch("main.print_user"), \
+         patch("main.save_turn"), \
+         patch("main.extract_and_store"), \
+         patch("main.build_context", new=AsyncMock(return_value="ctx")), \
+         patch("main.run_with_streaming", new=AsyncMock(return_value="ok")), \
+         patch("main.print_separator"):
+        await main.run_once("hello", mode="interactive")
+
+    mock_turn_start.assert_called_once_with("hello", mode="interactive")
+    mock_turn_end.assert_called_once()
+    assert mock_turn_end.call_args.kwargs["status"] == "ok"
 
 
 def test_on_background_scan_done_logs_failure_exception():

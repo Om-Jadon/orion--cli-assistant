@@ -19,7 +19,24 @@ _defaults = {
     "model": "qwen3:1.7b",
     "theme": "mocha",
     "max_width": 100,
+    "trace_logging_enabled": True,
+    "trace_log_retention_days": 7,
 }
+
+
+def _as_bool(value, default: bool) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        v = value.strip().lower()
+        if v in {"1", "true", "yes", "on"}:
+            return True
+        if v in {"0", "false", "no", "off"}:
+            return False
+        return default
+    if isinstance(value, (int, float)):
+        return bool(value)
+    return default
 
 def _load_user_config() -> dict:
     if CONFIG_FILE.exists():
@@ -38,6 +55,19 @@ _user = _load_user_config()
 MODEL     = _user.get("model",     _defaults["model"])
 THEME     = _user.get("theme",     _defaults["theme"])
 MAX_WIDTH = int(_user.get("max_width", _defaults["max_width"]))
+
+TRACE_LOGGING_ENABLED = _as_bool(
+    _user.get("trace_logging_enabled", _defaults["trace_logging_enabled"]),
+    _defaults["trace_logging_enabled"],
+)
+TRACE_LOG_RETENTION_DAYS = max(1, int(_user.get("trace_log_retention_days", _defaults["trace_log_retention_days"])))
+
+_trace_log_dir_raw = _user.get("trace_log_dir")
+if _trace_log_dir_raw:
+    _trace_log_dir = Path(_trace_log_dir_raw).expanduser()
+    TRACE_LOG_DIR = _trace_log_dir if _trace_log_dir.is_absolute() else ORION_DIR / _trace_log_dir
+else:
+    TRACE_LOG_DIR = ORION_DIR / "logs"
 
 # --- Cloud provider support ---
 

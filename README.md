@@ -29,6 +29,7 @@ It supports both local inference (Ollama) and cloud providers (OpenAI, Anthropic
   - sudo/root command blocking
   - destructive action confirmation
 - Structured debug logs written to ~/.orion/debug.log.
+- Full turn trace logs (user input, LLM request/response, tool calls/results) in ~/.orion/logs with 7-day default retention.
 
 ## Architecture Overview
 
@@ -150,6 +151,9 @@ Common fields:
 - model_string (used for cloud providers)
 - theme
 - max_width
+- trace_logging_enabled
+- trace_log_retention_days
+- trace_log_dir
 
 Example:
 
@@ -157,6 +161,8 @@ Example:
 model = "qwen3:1.7b"
 theme = "mocha"
 max_width = 100
+trace_logging_enabled = true
+trace_log_retention_days = 7
 ```
 
 Cloud provider examples:
@@ -166,6 +172,15 @@ model_string = "openai:gpt-4o-mini"
 # model_string = "anthropic:claude-sonnet-4-5"
 # model_string = "groq:openai/gpt-oss-120b"
 ```
+
+Groq token-limit fallback policy:
+
+- Fallback is enabled only for provider `groq` and only for token-limit exhaustion errors.
+- Fixed in-code model order:
+  - `groq:openai/gpt-oss-120b`
+  - `groq:llama-3.3-70b-versatile`
+  - `groq:qwen/qwen3-32b`
+- Non-token-limit errors do not trigger model switching.
 
 Set matching API key environment variables as needed:
 
@@ -204,6 +219,15 @@ uv run pytest -q tests/test_main.py
 ```text
 ~/.orion/debug.log
 ```
+
+- Full trace logs are written to daily JSONL files under:
+
+```text
+~/.orion/logs/
+```
+
+- Trace events include turn start/end, exact prompt sent to the model, model response, tool calls with parameters, and tool results.
+- Log retention defaults to 7 days and is configurable via `trace_log_retention_days`.
 
 Use this file when diagnosing provider, retrieval, and prewarm issues.
 

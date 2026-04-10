@@ -3,6 +3,35 @@ import pytest
 from unittest.mock import patch, MagicMock
 
 
+@pytest.mark.asyncio
+async def test_wrap_tool_for_trace_logs_start_and_end(monkeypatch):
+    import core.agent as ca
+
+    events = []
+
+    async def sample_tool(query: str) -> str:
+        return f"ok:{query}"
+
+    monkeypatch.setattr(
+        ca.trace_logging,
+        "log_tool_call_start",
+        lambda **kwargs: events.append(("start", kwargs)) or "call-1",
+    )
+    monkeypatch.setattr(
+        ca.trace_logging,
+        "log_tool_call_end",
+        lambda **kwargs: events.append(("end", kwargs)),
+    )
+
+    wrapped = ca._wrap_tool_for_trace(sample_tool)
+    result = await wrapped("abc")
+
+    assert result == "ok:abc"
+    assert events[0][0] == "start"
+    assert events[1][0] == "end"
+    assert events[1][1]["status"] == "ok"
+
+
 def _reload_agent():
     import core.agent as ca
     importlib.reload(ca)
@@ -78,6 +107,20 @@ def test_build_agent_cloud_no_extra_body():
         call_kwargs = mock_ac.call_args.kwargs
         model_settings = call_kwargs.get("model_settings", {})
         assert "extra_body" not in model_settings
+
+
+def test_build_agent_cloud_uses_model_override_when_provided():
+    """Cloud path must honor explicit model override for fallback attempts."""
+    ca = _reload_agent()
+    with patch("core.agent.PROVIDER", "groq"), \
+         patch("core.agent.MODEL_STRING", "groq:openai/gpt-oss-120b"), \
+         patch("core.agent.Agent") as mock_ac:
+        mock_ac.return_value = MagicMock()
+        ca.build_agent(think=False, model_string_override="groq:qwen/qwen3-32b")
+        first_positional = mock_ac.call_args.args[0] if mock_ac.call_args.args else None
+        first_keyword = mock_ac.call_args.kwargs.get("model")
+        model_arg = first_positional or first_keyword
+        assert model_arg == "groq:qwen/qwen3-32b"
 
 
 def test_system_prompt_instructs_no_retry_after_cancelled_confirmation():

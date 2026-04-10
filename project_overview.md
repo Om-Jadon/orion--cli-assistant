@@ -108,6 +108,7 @@ Runtime files under ~/.orion:
 - history: prompt_toolkit command history.
 - config.toml: user overrides.
 - debug.log: structured debug logs.
+- logs/: per-turn JSONL trace logs (user input, LLM request/response, tool calls/results), with 7-day default retention.
 
 ## High-Level Architecture
 
@@ -122,8 +123,10 @@ main.py handles process mode routing:
 It also initializes:
 
 - logging to ~/.orion/debug.log
+- trace logging to ~/.orion/logs/trace-YYYY-MM-DD.jsonl
 - foreground DB connection for interactive operations
 - dedicated background-scan DB connection lifecycle
+- background trace-log retention cleanup task
 - file tool DB connection injection
 
 ### 2) Agent Layer
@@ -136,6 +139,7 @@ core/agent.py builds the agent with provider-aware model configuration:
 Tool registration is centralized in build_agent and includes:
 
 - files, shell, browser, search, media tools.
+- trace-wrapped tool handlers that log tool name, parameters, result/error, and latency.
 
 System prompt enforces:
 
@@ -150,6 +154,9 @@ core/streaming.py:
 - Streams token deltas live to UI.
 - Handles retries for provider/tool-call formatting failure patterns.
 - Detects leaked textual tool-call markup and retries with corrective hinting.
+- For Groq only, falls back across a fixed in-code three-model chain on token-limit exhaustion errors.
+- Does not fallback for non-token-limit errors.
+- Logs each LLM request payload, retry reason, final response, and error metadata.
 
 ui/renderer.py, ui/spinner.py, ui/input.py:
 
@@ -305,6 +312,8 @@ safety/confirm.py:
 
 - Structured module-level debug logging.
 - Unified file sink: ~/.orion/debug.log.
+- Full flow trace logging in JSONL under ~/.orion/logs.
+- Default retention: last 7 days (configurable via config.toml).
 
 ## File Structure
 

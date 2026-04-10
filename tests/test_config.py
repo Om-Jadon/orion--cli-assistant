@@ -10,6 +10,7 @@ def test_paths_are_under_home():
     assert config.ORION_DIR.is_relative_to(home)
     assert config.DB_PATH.is_relative_to(home)
     assert config.HISTORY_FILE.is_relative_to(home)
+    assert config.TRACE_LOG_DIR.is_relative_to(home)
 
 
 def test_default_model():
@@ -57,13 +58,24 @@ def test_context_budgets_are_positive_ints():
         assert value > 0, f"{name} must be positive"
 
 
+def test_trace_logging_defaults():
+    import config
+    assert config.TRACE_LOGGING_ENABLED is True
+    assert config.TRACE_LOG_RETENTION_DAYS == 7
+
+
 def test_toml_override_updates_public_constants(tmp_path):
     """
     When ~/.orion/config.toml exists, the public constants must reflect its values.
     Uses importlib.reload to re-execute module-level code with a patched CONFIG_FILE.
     """
     toml_file = tmp_path / "config.toml"
-    toml_file.write_text('model = "qwen3:1.7b"\nmax_width = 80\n')
+    toml_file.write_text(
+        'model = "qwen3:1.7b"\n'
+        'max_width = 80\n'
+        'trace_logging_enabled = false\n'
+        'trace_log_retention_days = 14\n'
+    )
 
     import config as cfg
     try:
@@ -71,6 +83,8 @@ def test_toml_override_updates_public_constants(tmp_path):
             importlib.reload(cfg)
             assert cfg.MODEL == "qwen3:1.7b"
             assert cfg.MAX_WIDTH == 80
+            assert cfg.TRACE_LOGGING_ENABLED is False
+            assert cfg.TRACE_LOG_RETENTION_DAYS == 14
     finally:
         # Restore defaults — other tests in this process need clean module state
         importlib.reload(cfg)
@@ -155,3 +169,13 @@ def test_model_string_none_when_absent(tmp_path):
         assert cfg.MODEL_STRING is None
         assert cfg.PROVIDER == "ollama"
     importlib.reload(cfg)
+
+
+def test_groq_token_limit_fallback_model_order_is_fixed():
+    from core.model_fallback import get_groq_token_limit_fallback_models
+
+    assert get_groq_token_limit_fallback_models() == (
+        "groq:openai/gpt-oss-120b",
+        "groq:llama-3.3-70b-versatile",
+        "groq:qwen/qwen3-32b",
+    )
