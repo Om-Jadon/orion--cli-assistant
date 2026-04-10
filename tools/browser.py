@@ -5,6 +5,10 @@ import trafilatura
 from safety.boundaries import validate_path
 
 
+MAX_EXTRACT_CHARS = 6000
+MIN_EXTRACT_CHARS = 10
+
+
 async def open_url(url: str) -> str:
     """
     Open a web URL in the default browser, or a local file in its default app.
@@ -28,17 +32,43 @@ async def open_url(url: str) -> str:
 
 
 async def fetch_page(url: str) -> str:
-    """Extract clean text from a web page using trafilatura."""
+    """
+    Extract clean text from a web page.
+
+    Tier 1: Trafilatura (fast, no browser)
+    Tier 2: Playwright (for JS-heavy pages or weak Tier-1 extracts)
+    """
     if not _is_online():
         return "Offline: cannot fetch pages right now."
+
+    # Tier 1: Fast extraction from fetched HTML
     try:
         downloaded = trafilatura.fetch_url(url)
         text = trafilatura.extract(downloaded)
-        if not text:
-            return f"Could not extract content from {url}"
-        return text[:4000]
+        if text and len(text) >= MIN_EXTRACT_CHARS:
+            return text[:MAX_EXTRACT_CHARS]
+    except Exception:
+        pass
+
+    # Tier 2: JS-rendered fallback
+    return await _playwright_extract(url)
+
+
+async def _playwright_extract(url: str) -> str:
+    try:
+        from playwright.async_api import async_playwright
+
+        async with async_playwright() as p:
+            browser = await p.webkit.launch(headless=True)
+            page = await browser.new_page()
+            await page.goto(url, timeout=15000)
+            content = await page.content()
+            await browser.close()
+
+        text = trafilatura.extract(content)
+        return text[:MAX_EXTRACT_CHARS] if text else f"Could not extract content from {url}"
     except Exception as e:
-        return f"Error fetching {url}: {e}"
+        return f"Could not fetch page: {e}"
 
 
 def _is_online() -> bool:

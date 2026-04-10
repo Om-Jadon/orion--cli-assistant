@@ -9,6 +9,7 @@ dependencies = [
     "fastembed>=0.8.0",
     "httpx>=0.28.1",
     "openai>=2.30.0",
+    "playwright>=1.58.0",
     "prompt-toolkit>=3.0.52",
     "pydantic-ai>=0.2",
     "rich>=14.3.3",

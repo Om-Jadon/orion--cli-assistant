@@ -3,7 +3,14 @@ from tools.browser import _is_online
 from tools.search import web_search_raw
 
 
-async def open_media(query: str, site: str) -> str:
+SITE_FILTERS = {
+    "youtube": "site:youtube.com",
+    "spotify": "site:open.spotify.com",
+    "soundcloud": "site:soundcloud.com",
+}
+
+
+async def open_media(query: str, site: str = "youtube") -> str:
     """Find and open media content.
 
     Args:
@@ -13,11 +20,21 @@ async def open_media(query: str, site: str) -> str:
     if not _is_online():
         return "Offline: cannot search right now."
     try:
-        results = await web_search_raw(f"{query} site:{site}", max_results=3)
+        site_filter = SITE_FILTERS.get(site, f"site:{site}")
+        results = await web_search_raw(f"{query} {site_filter}", max_results=5)
         if not results:
-            return f"No results found for '{query}' on {site}"
-        url = results[0]["href"]
+            return f"No results found for '{query}'"
+
+        def is_watch_url(href: str) -> bool:
+            return "youtube.com/watch" in href or "youtu.be/" in href
+
+        watch_url = next((r.get("href", "") for r in results if is_watch_url(r.get("href", ""))), None)
+        url = watch_url or results[0].get("href", "")
+        if not url:
+            return f"No usable results found for '{query}'"
+
         subprocess.Popen(["xdg-open", url])
-        return f"Opening: {url}"
+        title = next((r.get("title", url) for r in results if r.get("href", "") == url), url)
+        return f"Opening: {title}\n{url}"
     except Exception as e:
         return f"Error: {e}"
