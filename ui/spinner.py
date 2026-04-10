@@ -5,6 +5,7 @@ from rich.console import Console
 
 BRAILLE = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
 THINKING_COLOR = "\033[3;38;2;88;91;112m"  # italic #585B70 (Mocha thinking)
+ORION_COLOR = "\033[38;2;137;180;250m"   # #89B4FA (Mocha blue)
 RESET = "\033[0m"
 
 class Spinner:
@@ -37,6 +38,6 @@ class Spinner:
 
     async def _spin(self):
         for frame in itertools.cycle(BRAILLE):
-            sys.stdout.write(f"\r{THINKING_COLOR}{frame} {self._label}{RESET}")
+            sys.stdout.write(f"\r{ORION_COLOR}◆{RESET}  {THINKING_COLOR}{frame} {self._label}{RESET}")
             sys.stdout.flush()
             await asyncio.sleep(0.08)
