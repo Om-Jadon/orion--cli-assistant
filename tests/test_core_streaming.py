@@ -1,5 +1,5 @@
 import pytest
-from core.model_fallback import get_groq_token_limit_fallback_models
+from orion.core.model_fallback import get_groq_token_limit_fallback_models
 
 
 class _FakeResult:
@@ -48,7 +48,7 @@ class _FakeSpinner:
 
 @pytest.mark.asyncio
 async def test_run_with_streaming_retries_on_textual_tool_call(monkeypatch):
-    import core.streaming as cs
+    from orion.core import streaming as cs
 
     async def _capture(gen):
         out = ""
@@ -78,7 +78,7 @@ async def test_run_with_streaming_retries_on_textual_tool_call(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_run_with_streaming_retries_on_failed_generation(monkeypatch):
-    import core.streaming as cs
+    from orion.core import streaming as cs
 
     async def _capture(gen):
         out = ""
@@ -108,7 +108,7 @@ async def test_run_with_streaming_retries_on_failed_generation(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_run_with_streaming_keeps_model_response_after_cancelled_tool(monkeypatch):
-    import core.streaming as cs
+    from orion.core import streaming as cs
 
     async def _capture(gen):
         out = ""
@@ -135,7 +135,7 @@ async def test_run_with_streaming_keeps_model_response_after_cancelled_tool(monk
 
 @pytest.mark.asyncio
 async def test_run_with_streaming_emits_llm_request_and_response_events(monkeypatch):
-    import core.streaming as cs
+    from orion.core import streaming as cs
 
     events = []
 
@@ -163,7 +163,7 @@ async def test_run_with_streaming_emits_llm_request_and_response_events(monkeypa
 
 
 def test_is_groq_token_limit_error_classifier():
-    import core.streaming as cs
+    from orion.core import streaming as cs
 
     assert cs._is_groq_token_limit_error("rate_limit_exceeded: token quota exceeded") is True
     assert cs._is_groq_token_limit_error("Request too large for model") is True
@@ -173,7 +173,7 @@ def test_is_groq_token_limit_error_classifier():
 
 @pytest.mark.asyncio
 async def test_run_with_streaming_groq_falls_back_on_token_limit(monkeypatch):
-    import core.streaming as cs
+    from orion.core import streaming as cs
 
     events = []
 
@@ -208,7 +208,7 @@ async def test_run_with_streaming_groq_falls_back_on_token_limit(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_run_with_streaming_groq_does_not_fallback_on_non_token_errors(monkeypatch):
-    import core.streaming as cs
+    from orion.core import streaming as cs
 
     events = []
     builds = []
@@ -242,7 +242,7 @@ async def test_run_with_streaming_groq_does_not_fallback_on_non_token_errors(mon
 
 @pytest.mark.asyncio
 async def test_run_with_streaming_groq_reports_exhaustion_after_third_model(monkeypatch):
-    import core.streaming as cs
+    from orion.core import streaming as cs
 
     events = []
     build_queue = [

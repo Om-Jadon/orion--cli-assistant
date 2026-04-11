@@ -33,203 +33,116 @@ It supports cloud providers (OpenAI, Anthropic, Gemini, Groq, Mistral) through p
 
 ## Architecture Overview
 
-The runtime is split into focused layers:
+The project follows a standard `src/` layout for clean packaging and namespace isolation. The source resides in `src/orion/`:
 
 - Entry and orchestration:
-  - main.py routes one-shot, pipe, and interactive modes, with a dedicated background scan connection
+  - `src/orion/main.py`: Routes one-shot, pipe, and interactive modes; manages global state.
 - Agent core:
-  - core/agent.py builds a provider-aware PydanticAI agent and registers tools
-  - core/streaming.py handles streaming and retry logic
-  - core/context.py assembles profile, recent turns, and retrieved memory
+  - `src/orion/core/agent.py`: Builds a provider-aware PydanticAI agent and registers tools.
+  - `src/orion/core/streaming.py`: Handles streaming and retry logic.
+  - `src/orion/core/context.py`: Assembles profile, recent turns, and retrieved memory.
 - Memory subsystem:
-  - memory/db.py schema and connection setup
-  - memory/store.py conversation/profile/operation persistence
-  - memory/retrieval.py hybrid FTS + vector search
-  - memory/indexer.py home file metadata indexing
-  - memory/embeddings.py fastembed vector generation using config-sourced model settings
+  - `src/orion/memory/db.py`: SQLite schema and connection setup.
+  - `src/orion/memory/store.py`: Conversation/profile/operation persistence.
+  - `src/orion/memory/retrieval.py`: Hybrid FTS + vector search.
+  - `src/orion/memory/indexer.py`: Home file metadata indexing.
+  - `src/orion/memory/embeddings.py`: Fastembed vector generation.
 - Tools:
-  - tools/files.py, tools/shell.py, tools/browser.py, tools/search.py, tools/media.py (including hardened file-search fallback behavior)
-- UI and controls:
-  - ui/renderer.py, ui/input.py, ui/spinner.py, ui/startup.py, ui/slash.py
-- Safety:
-  - safety/boundaries.py and safety/confirm.py
+  - `src/orion/tools/`: Files, shell, browser, search, and media tool modules.
+- UI:
+  - `src/orion/ui/`: Renderer, spinner, input handlers, and slash command routing.
 
-For a deeper technical breakdown, see project_overview.md.
+For a deeper technical breakdown, see [project_overview.md](project_overview.md).
 
 ## Repository Structure
 
 ```text
 cli-assistant/
-├── main.py
-├── config.py
-├── core/
-├── memory/
-├── tools/
-├── ui/
-├── safety/
-├── tests/
+├── src/
+│   └── orion/         # Application source package
+├── tests/             # Comprehensive test suite
+├── docs/              # Superpower plans and walkthroughs
+├── README.md
 ├── project_overview.md
 ├── pyproject.toml
 └── uv.lock
 ```
 
-## Requirements
-
-- Linux
-- Python 3.13+
-- uv
-
 ## Installation
 
-1. Install uv
+### Using uv (Recommended)
+
+To install `orion-cli` as a global tool:
 
 ```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
+# From the repository root
+uv tool install .
 ```
 
-1. Install dependencies
+This makes the `orion` command available globally. 
+
+> [!NOTE]
+> On the first run, Orion will automatically install the Playwright web extraction engine (~150MB) if it's not already present.
+
+### Development Mode
+
+To install in editable mode for active development:
 
 ```bash
-cd /path/to/cli-assistant
-uv sync
+uv tool install --editable .
 ```
 
-1. Install Playwright runtime (used for JS-rendered page fallback)
+Alternatively, you can run directly through `uv`:
 
 ```bash
-uv run playwright install webkit
-```
-
-1. Build or refresh the file index
-
-```bash
-uv run main.py
-# then run /scan inside Orion
+uv run orion
 ```
 
 ## Running Orion
 
-Interactive mode:
+Once installed, use the `orion` command:
+
+**Interactive mode:**
 
 ```bash
-uv run main.py
+orion
 ```
 
-One-shot mode:
+**One-shot mode:**
 
 ```bash
-uv run main.py "summarize this repository"
+orion "summarize this repository"
 ```
 
-Pipe mode:
+**Pipe mode:**
 
 ```bash
-cat build.log | uv run main.py "find root cause"
+cat build.log | orion "find root cause"
 ```
 
 ## Configuration
 
-Orion reads runtime config from:
+Orion reads runtime configuration from `~/.orion/config.toml`. Use the following to initialize your environment:
 
-```text
-~/.orion/config.toml
-```
-
-Common fields:
-
-- model_string (required)
-- theme
-- max_width
-- trace_logging_enabled
-- trace_log_retention_days
-- trace_log_dir
-
-Example:
+1. Create the directory: `mkdir -p ~/.orion`
+2. Create `config.toml`:
 
 ```toml
-model_string = "openai:gpt-4o-mini"
-theme = "mocha"
-max_width = 100
-trace_logging_enabled = true
-trace_log_retention_days = 7
+model_string = "openai:gpt-4o"  # or "anthropic:claude-3-5-sonnet-latest", etc.
 ```
 
-Cloud provider examples:
-
-```toml
-model_string = "openai:gpt-4o-mini"
-# model_string = "anthropic:claude-sonnet-4-5"
-# model_string = "groq:openai/gpt-oss-120b"
-```
-
-Migration from legacy local config:
-
-```toml
-# old (no longer supported)
-# model = "qwen3:1.7b"
-
-# new
-model_string = "openai:gpt-4o-mini"
-```
-
-Groq token-limit fallback policy:
-
-- Fallback is enabled only for provider `groq` and only for token-limit exhaustion errors.
-- Fixed in-code model order:
-  - `groq:openai/gpt-oss-120b`
-  - `groq:llama-3.3-70b-versatile`
-  - `groq:qwen/qwen3-32b`
-- Non-token-limit errors do not trigger model switching.
-
-Set matching API key environment variables as needed:
-
-- OPENAI_API_KEY
-- ANTHROPIC_API_KEY
-- GEMINI_API_KEY
-- GROQ_API_KEY
-- MISTRAL_API_KEY
-
-## Safety Guarantees
-
-- File operations are constrained to your HOME directory.
-- sudo/su/pkexec/doas shell commands are blocked.
-- Dangerous shell patterns are blocked.
-- Destructive actions require explicit confirmation.
-
-## Development
-
-Run tests:
+3. Export your provider's API key:
 
 ```bash
-uv run pytest -q
+export OPENAI_API_KEY=sk-...
 ```
 
-Run a specific test file:
+For more options, see [config.py](src/orion/config.py).
+
+## Quality and Verification
+
+Orion maintains a high-quality bar with a 170+ test suite covering core logic, tools, and UI primitives.
 
 ```bash
-uv run pytest -q tests/test_main.py
+uv run pytest
 ```
-
-## Logging and Diagnostics
-
-- Debug logging is configured in main.py.
-- Logs are written to:
-
-```text
-~/.orion/debug.log
-```
-
-- Full trace logs are written to daily JSONL files under:
-
-```text
-~/.orion/logs/
-```
-
-- Trace events include turn start/end, exact prompt sent to the model, model response, tool calls with parameters, and tool results.
-- Log retention defaults to 7 days and is configurable via `trace_log_retention_days`.
-
-Use this file when diagnosing provider, retrieval, and prewarm issues.
-
-## Project Documentation
-
-- project_overview.md is the canonical detailed technical document.

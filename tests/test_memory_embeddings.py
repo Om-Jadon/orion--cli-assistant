@@ -7,16 +7,16 @@ from unittest.mock import AsyncMock, patch, MagicMock
 async def test_embed_returns_correct_dim():
     """Test that embed() returns a vector of EMBED_DIM length."""
     import numpy as np
-    from config import EMBED_DIM
+    from orion.config import EMBED_DIM
 
     fake_vector = np.array([0.1] * EMBED_DIM)
 
-    with patch("memory.embeddings._get_model") as mock_get_model:
+    with patch("orion.memory.embeddings._get_model") as mock_get_model:
         mock_model = MagicMock()
         mock_model.embed.return_value = iter([fake_vector])
         mock_get_model.return_value = mock_model
 
-        from memory.embeddings import embed
+        from orion.memory.embeddings import embed
         result = await embed("test text")
 
         assert len(result) == EMBED_DIM
@@ -26,7 +26,7 @@ async def test_embed_returns_correct_dim():
 
 def test_serialize_produces_correct_bytes():
     """Test that serialize() produces correct binary output matching the input floats."""
-    from memory.embeddings import serialize
+    from orion.memory.embeddings import serialize
 
     test_floats = [1.0, 2.0, 3.0]
     serialized = serialize(test_floats)
@@ -41,7 +41,7 @@ def test_serialize_produces_correct_bytes():
 
 def test_serialize_empty_list():
     """Test that serialize() handles an empty list."""
-    from memory.embeddings import serialize
+    from orion.memory.embeddings import serialize
 
     serialized = serialize([])
     assert len(serialized) == 0
@@ -50,8 +50,8 @@ def test_serialize_empty_list():
 
 def test_serialize_large_vector():
     """Test that serialize() handles a 256-dim vector correctly."""
-    from memory.embeddings import serialize
-    from config import EMBED_DIM
+    from orion.memory.embeddings import serialize
+    from orion.config import EMBED_DIM
 
     # Create a vector of EMBED_DIM floats
     large_vector = [float(i) for i in range(EMBED_DIM)]
@@ -67,7 +67,7 @@ def test_serialize_large_vector():
 
 def test_serialize_roundtrip():
     """Test that serialization and deserialization are symmetric."""
-    from memory.embeddings import serialize
+    from orion.memory.embeddings import serialize
     import struct
 
     original = [0.123, -45.678, 999.999, 0.0, -0.0]
@@ -87,11 +87,11 @@ def test_serialize_roundtrip():
 
 @pytest.mark.asyncio
 async def test_get_model_uses_config_embed_model():
-    import memory.embeddings as embeddings_mod
+    from orion.memory import embeddings as embeddings_mod
 
     embeddings_mod._model = None
     try:
-        with patch("memory.embeddings.TextEmbedding") as mock_text_embedding:
+        with patch("orion.memory.embeddings.TextEmbedding") as mock_text_embedding:
             fake_model = MagicMock()
             mock_text_embedding.return_value = fake_model
 

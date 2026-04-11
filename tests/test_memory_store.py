@@ -5,18 +5,18 @@ import pytest
 @pytest.fixture
 def conn(tmp_path, monkeypatch):
     """Provide a real SQLite connection with migrations applied, isolated per test."""
-    import config
-    test_db = tmp_path / ".orion" / "memory.db"
+    from orion import config
+    test_db = tmp_path / ".orion" / "orion.memory.db"
     monkeypatch.setattr(config, "DB_PATH", test_db)
-    import memory.db
-    monkeypatch.setattr(memory.db, "DB_PATH", test_db)
-    c = memory.db.get_connection()
+    from orion.memory import db
+    monkeypatch.setattr(db, "DB_PATH", test_db)
+    c = db.get_connection()
     yield c
     c.close()
 
 
 def test_save_and_retrieve_turns(conn):
-    from memory.store import save_turn, get_recent_turns
+    from orion.memory.store import save_turn, get_recent_turns
 
     save_turn(conn, "s1", "user", "Hello")
     save_turn(conn, "s1", "assistant", "Hi there")
@@ -36,7 +36,7 @@ def test_save_and_retrieve_turns(conn):
 
 
 def test_recent_turns_token_limit(conn):
-    from memory.store import save_turn, get_recent_turns
+    from orion.memory.store import save_turn, get_recent_turns
 
     # Save 20 turns, each with a moderately long message (~15 words)
     for i in range(20):
@@ -52,7 +52,7 @@ def test_recent_turns_token_limit(conn):
 
 
 def test_recent_turns_does_not_undercount_long_url_like_content(conn):
-    from memory.store import save_turn, get_recent_turns
+    from orion.memory.store import save_turn, get_recent_turns
 
     # No-whitespace content used to be severely undercounted by split() word counting.
     long_url_like = "https://example.com/" + ("segment-" * 80)
@@ -64,7 +64,7 @@ def test_recent_turns_does_not_undercount_long_url_like_content(conn):
 
 
 def test_upsert_profile_insert_and_update(conn):
-    from memory.store import upsert_profile, get_user_profile
+    from orion.memory.store import upsert_profile, get_user_profile
 
     upsert_profile(conn, "name", "Alice", confidence=0.9)
     profile = get_user_profile(conn)
@@ -80,7 +80,7 @@ def test_upsert_profile_insert_and_update(conn):
 
 
 def test_get_user_profile_returns_dict(conn):
-    from memory.store import upsert_profile, get_user_profile
+    from orion.memory.store import upsert_profile, get_user_profile
 
     upsert_profile(conn, "location", "NYC", confidence=0.8)
     upsert_profile(conn, "language", "Python", confidence=1.0)
@@ -93,7 +93,7 @@ def test_get_user_profile_returns_dict(conn):
 
 
 def test_log_and_get_last_operation(conn):
-    from memory.store import log_operation, get_last_operation
+    from orion.memory.store import log_operation, get_last_operation
 
     log_operation(conn, "move", "/src/file.txt", "/dst/file.txt")
     row = get_last_operation(conn)
@@ -105,7 +105,7 @@ def test_log_and_get_last_operation(conn):
 
 
 def test_get_last_operation_returns_most_recent(conn):
-    from memory.store import log_operation, get_last_operation
+    from orion.memory.store import log_operation, get_last_operation
 
     log_operation(conn, "copy", "/a", "/b")
     log_operation(conn, "delete", "/c", "/d")

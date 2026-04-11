@@ -2,7 +2,7 @@ import sqlite3
 from pathlib import Path
 import pytest
 
-from memory.indexer import _infer_tags
+from orion.memory.indexer import _infer_tags
 
 
 @pytest.fixture()
@@ -27,11 +27,11 @@ def conn(tmp_path):
 
 def _scan(conn, tmp_path, monkeypatch, verbose=False):
     """Patch config.HOME to tmp_path and call scan_home."""
-    import config
-    import memory.indexer as indexer
+    from orion import config
+    from orion.memory import indexer as indexer
     monkeypatch.setattr(config, "HOME", tmp_path)
     monkeypatch.setattr(indexer, "HOME", tmp_path)
-    from memory.indexer import scan_home
+    from orion.memory.indexer import scan_home
     scan_home(conn, verbose=verbose)
 
 

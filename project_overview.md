@@ -327,59 +327,62 @@ cli-assistant/
 │   ├── agent.py
 │   ├── context.py
 │   └── streaming.py
-├── main.py
-├── memory/
-│   ├── __init__.py
-│   ├── db.py
-│   ├── embeddings.py
-│   ├── indexer.py
-│   ├── retrieval.py
-│   └── store.py
-├── project_overview.md
 ├── pyproject.toml
+├── project_overview.md
 ├── README.md
-├── safety/
-│   ├── __init__.py
-│   ├── boundaries.py
-│   └── confirm.py
+├── src/
+│   └── orion/
+│       ├── __init__.py
+│       ├── config.py
+│       ├── main.py
+│       ├── core/
+│       │   ├── __init__.py
+│       │   ├── agent.py
+│       │   ├── context.py
+│       │   ├── model_fallback.py
+│       │   ├── streaming.py
+│       │   └── trace_logging.py
+│       ├── memory/
+│       │   ├── __init__.py
+│       │   ├── db.py
+│       │   ├── embeddings.py
+│       │   ├── indexer.py
+│       │   ├── retrieval.py
+│       │   └── store.py
+│       ├── safety/
+│       │   ├── __init__.py
+│       │   ├── boundaries.py
+│       │   └── confirm.py
+│       ├── tools/
+│       │   ├── __init__.py
+│       │   ├── browser.py
+│       │   ├── files.py
+│       │   ├── media.py
+│       │   ├── memory_tool.py
+│       │   ├── search.py
+│       │   └── shell.py
+│       └── ui/
+│           ├── __init__.py
+│           ├── input.py
+│           ├── renderer.py
+│           ├── slash.py
+│           ├── spinner.py
+│           └── startup.py
 ├── tests/
-│   ├── __init__.py
-│   ├── test_agent.py
-│   ├── test_boundaries.py
+│   ├── conftest.py
 │   ├── test_config.py
+│   ├── test_core_agent.py
 │   ├── test_core_context.py
+│   ├── test_core_model_fallback.py
 │   ├── test_core_streaming.py
 │   ├── test_main.py
 │   ├── test_memory_db.py
-│   ├── test_memory_embeddings.py
-│   ├── test_memory_indexer.py
-│   ├── test_memory_retrieval.py
 │   ├── test_memory_store.py
-│   ├── test_renderer.py
+│   ├── test_safety_boundaries.py
 │   ├── test_safety_confirm.py
-│   ├── test_slash.py
-│   ├── test_spinner.py
-│   ├── test_startup.py
-│   ├── test_tools_browser.py
-│   ├── test_tools_files.py
-│   ├── test_tools_media.py
-│   ├── test_tools_search.py
-│   └── test_tools_shell.py
-├── tools/
-│   ├── __init__.py
-│   ├── browser.py
-│   ├── files.py
-│   ├── memory_tool.py
-│   ├── media.py
-│   ├── search.py
-│   └── shell.py
-├── ui/
-│   ├── __init__.py
-│   ├── input.py
-│   ├── renderer.py
-│   ├── slash.py
-│   ├── spinner.py
-│   └── startup.py
+│   ├── test_ui_primitives.py
+│   ├── test_ui_slash.py
+│   └── test_tools_...
 └── uv.lock
 ```
 
@@ -405,9 +408,9 @@ Current verification state:
 
 Recommended extension points:
 
-- Add new slash commands in ui/slash.py.
-- Add new tool modules and register in core/agent.py.
-- Extend schema in memory/db.py and wire through memory/store.py and retrieval paths.
-- Add provider-specific runtime tuning in config.py and core/agent.py.
+- Add new slash commands in src/orion/ui/slash.py.
+- Add new tool modules and register in src/orion/core/agent.py.
+- Extend schema in src/orion/memory/db.py and wire through src/orion/memory/store.py and retrieval paths.
+- Add provider-specific runtime tuning in src/orion/config.py and src/orion/core/agent.py.
 
 This document is the canonical project-level technical overview and replaces separate planning documentation.

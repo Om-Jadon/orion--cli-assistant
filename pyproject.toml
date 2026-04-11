@@ -1,7 +1,11 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
-name = "cli-assistant"
-version = "0.1.0"
-description = "Add your description here"
+name = "orion-cli"
+version = "0.2.0"
+description = "A Linux-first CLI AI assistant"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
@@ -17,6 +21,12 @@ dependencies = [
     "trafilatura>=2.0.0",
 ]
 
+[project.scripts]
+orion = "orion.main:cli_entry"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/orion"]
+
 [dependency-groups]
 dev = [
     "pytest>=9.0.2",
@@ -25,4 +35,4 @@ dev = [
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-pythonpath   = ["."]
+pythonpath   = ["src"]

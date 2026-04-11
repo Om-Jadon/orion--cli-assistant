@@ -3,7 +3,7 @@ import sqlite_vec
 import pytest
 from unittest.mock import AsyncMock, patch
 
-from config import EMBED_DIM
+from orion.config import EMBED_DIM
 
 
 def make_conn() -> sqlite3.Connection:
@@ -52,7 +52,7 @@ def make_conn() -> sqlite3.Connection:
 
 @pytest.mark.asyncio
 async def test_empty_db_returns_empty_string():
-    from core.context import build_context
+    from orion.core.context import build_context
 
     conn = make_conn()
     result = await build_context(conn, "what is python?", session_id="s1")
@@ -62,8 +62,8 @@ async def test_empty_db_returns_empty_string():
 
 @pytest.mark.asyncio
 async def test_profile_included_in_context():
-    from core.context import build_context
-    from memory.store import upsert_profile
+    from orion.core.context import build_context
+    from orion.memory.store import upsert_profile
 
     conn = make_conn()
     upsert_profile(conn, "name", "Alice")
@@ -75,8 +75,8 @@ async def test_profile_included_in_context():
 
 @pytest.mark.asyncio
 async def test_recent_turns_included():
-    from core.context import build_context
-    from memory.store import save_turn
+    from orion.core.context import build_context
+    from orion.memory.store import save_turn
 
     conn = make_conn()
     save_turn(conn, "s1", "user", "Hello there")
@@ -88,10 +88,10 @@ async def test_recent_turns_included():
 
 @pytest.mark.asyncio
 async def test_retrieval_always_called():
-    from core.context import build_context
+    from orion.core.context import build_context
 
     conn = make_conn()
-    with patch("core.context.hybrid_search", new=AsyncMock(return_value=[])) as mock_search:
+    with patch("orion.core.context.hybrid_search", new=AsyncMock(return_value=[])) as mock_search:
         result = await build_context(conn, "what is python?", session_id="s1")
         mock_search.assert_called_once()
     assert "RELEVANT MEMORY:" not in result
@@ -100,11 +100,11 @@ async def test_retrieval_always_called():
 
 @pytest.mark.asyncio
 async def test_retrieval_injected_when_results_exist():
-    from core.context import build_context
+    from orion.core.context import build_context
 
     conn = make_conn()
     mock_results = [{"content": "We discussed Python yesterday", "source": "test"}]
-    with patch("core.context.hybrid_search", new=AsyncMock(return_value=mock_results)):
+    with patch("orion.core.context.hybrid_search", new=AsyncMock(return_value=mock_results)):
         result = await build_context(conn, "what is python?", session_id="s1")
     assert "RELEVANT MEMORY:" in result
     assert "We discussed Python yesterday" in result
