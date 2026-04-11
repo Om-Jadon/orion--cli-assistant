@@ -77,7 +77,7 @@ async def test_open_url_still_works():
     with tempfile.NamedTemporaryFile(dir=Path.home(), suffix=".txt", delete=False) as f:
         tmp_path = f.name
     try:
-        with patch("subprocess.Popen") as mock_popen:
+        with patch("webbrowser.open") as mock_popen:
             result = await open_url(tmp_path)
         assert "not found" not in result.lower()
         assert "blocked" not in result.lower()

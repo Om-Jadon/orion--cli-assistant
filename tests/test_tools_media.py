@@ -13,11 +13,11 @@ async def test_open_media_prefers_watch_result_and_uses_default_site():
     ]
     with patch("tools.media._is_online", return_value=True), \
          patch("tools.media.web_search_raw", new=AsyncMock(return_value=fake_results)), \
-         patch("tools.media.subprocess.Popen") as mock_popen:
+         patch("webbrowser.open") as mock_popen:
         result = await open_media("lofi beats")
 
     assert result == "Opening: Test Video\nhttps://youtube.com/watch?v=abc123"
-    mock_popen.assert_called_once_with(["xdg-open", "https://youtube.com/watch?v=abc123"])
+    mock_popen.assert_called_once_with("https://youtube.com/watch?v=abc123")
 
 
 @pytest.mark.asyncio

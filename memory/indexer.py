@@ -43,6 +43,9 @@ def _index_file(conn: sqlite3.Connection, path: Path, verbose: bool):
 
     except (PermissionError, OSError):
         pass
+    except Exception as e:
+        if verbose:
+            print(f"  error indexing {path.name}: {e}")
 
 def _infer_tags(path: Path) -> str:
     parts      = [p.lower() for p in path.parts]

@@ -21,7 +21,8 @@ async def open_url(url: str) -> str:
     if url.startswith(("http://", "https://")):
         if not _is_online():
             return "Offline: cannot open web URLs right now."
-        subprocess.Popen(["xdg-open", url])
+        import webbrowser
+        webbrowser.open(url)
         return f"Opened: {url}"
     else:
         ok, resolved = validate_path(url)
@@ -29,7 +30,8 @@ async def open_url(url: str) -> str:
             return resolved
         if not Path(resolved).exists():
             return f"File not found: {url}"
-        subprocess.Popen(["xdg-open", resolved])
+        import webbrowser
+        webbrowser.open(f"file://{resolved}")
         return f"Opened: {Path(resolved).name}"
 
 
@@ -62,10 +64,12 @@ async def _playwright_extract(url: str) -> str:
 
         async with async_playwright() as p:
             browser = await p.webkit.launch(headless=True)
-            page = await browser.new_page()
-            await page.goto(url, timeout=15000)
-            content = await page.content()
-            await browser.close()
+            try:
+                page = await browser.new_page()
+                await page.goto(url, timeout=15000)
+                content = await page.content()
+            finally:
+                await browser.close()
 
         text = trafilatura.extract(content)
         return text[:MAX_EXTRACT_CHARS] if text else f"Could not extract content from {url}"

@@ -85,7 +85,8 @@ def test_serialize_roundtrip():
             assert rel_error < 1e-4
 
 
-def test_get_model_uses_config_embed_model():
+@pytest.mark.asyncio
+async def test_get_model_uses_config_embed_model():
     import memory.embeddings as embeddings_mod
 
     embeddings_mod._model = None
@@ -94,7 +95,7 @@ def test_get_model_uses_config_embed_model():
             fake_model = MagicMock()
             mock_text_embedding.return_value = fake_model
 
-            got = embeddings_mod._get_model()
+            got = await embeddings_mod._get_model()
 
         assert got is fake_model
         mock_text_embedding.assert_called_once_with(embeddings_mod.EMBED_MODEL)

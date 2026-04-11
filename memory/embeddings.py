@@ -4,16 +4,19 @@ from fastembed import TextEmbedding
 from config import EMBED_DIM, EMBED_MODEL
 
 _model: TextEmbedding | None = None
+_model_lock = asyncio.Lock()
 
-def _get_model() -> TextEmbedding:
+async def _get_model() -> TextEmbedding:
     global _model
     if _model is None:
-        _model = TextEmbedding(EMBED_MODEL)
+        async with _model_lock:
+            if _model is None:
+                _model = await asyncio.to_thread(TextEmbedding, EMBED_MODEL)
     return _model
 
 
 async def embed(text: str) -> list[float]:
-    model = _get_model()
+    model = await _get_model()
     vector = await asyncio.to_thread(lambda: next(model.embed([text])))
     return vector[:EMBED_DIM].tolist()
 

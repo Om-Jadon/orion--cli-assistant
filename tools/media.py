@@ -33,7 +33,8 @@ async def open_media(query: str, site: str = "youtube") -> str:
         if not url:
             return f"No usable results found for '{query}'"
 
-        subprocess.Popen(["xdg-open", url])
+        import webbrowser
+        webbrowser.open(url)
         title = next((r.get("title", url) for r in results if r.get("href", "") == url), url)
         return f"Opening: {title}\n{url}"
     except Exception as e:
