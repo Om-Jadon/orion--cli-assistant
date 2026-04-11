@@ -77,3 +77,14 @@ def get_last_operation(conn: sqlite3.Connection) -> sqlite3.Row | None:
     return conn.execute(
         "SELECT * FROM operation_log ORDER BY id DESC LIMIT 1"
     ).fetchone()
+
+
+def pop_last_operation(conn: sqlite3.Connection) -> sqlite3.Row | None:
+    """Fetch the latest operation and remove it from the log (atomic pop)."""
+    row = conn.execute(
+        "SELECT * FROM operation_log ORDER BY id DESC LIMIT 1"
+    ).fetchone()
+    if row:
+        conn.execute("DELETE FROM operation_log WHERE id = ?", (row["id"],))
+        conn.commit()
+    return row

@@ -12,11 +12,11 @@ from core.streaming import run_with_streaming
 from core.context import build_context
 from memory.db import get_connection
 from memory.store import save_turn
-from memory.extractor import extract_and_store
 from config import MODEL_STRING, ORION_DIR
 from config import TRACE_LOG_RETENTION_DAYS
 from core import trace_logging as trace_logging
 from tools import files as file_tools
+from tools import memory_tool
 from safety import confirm as safety_confirm
 
 ORION_DIR.mkdir(parents=True, exist_ok=True)
@@ -30,6 +30,7 @@ state = slash.RuntimeState(
 trace_logging.set_session_id(state.session_id)
 conn = get_connection()
 file_tools.set_connection(conn)
+memory_tool.set_connection(conn)
 
 
 def _run_background_scan():
@@ -86,7 +87,6 @@ async def main():
         trace_logging.start_turn(full_query, mode="pipe")
         safety_confirm.reset_turn_state()
         save_turn(conn, state.session_id, "user", full_query)
-        extract_and_store(conn, full_query)
         response = ""
         try:
             context = await build_context(conn, full_query, state.session_id)
@@ -159,7 +159,6 @@ async def run_once(query: str, mode: str = "interactive"):
     print_user(query)
 
     save_turn(conn, state.session_id, "user", query)
-    extract_and_store(conn, query)
 
     response = ""
     try:
@@ -195,12 +194,14 @@ async def run_once(query: str, mode: str = "interactive"):
 
 
 async def handle_slash(cmd: str):
-    await slash.handle_slash(
+    res = await slash.handle_slash(
         cmd,
         state=state,
         conn=conn,
         console=console,
     )
+    if res:
+        save_turn(conn, state.session_id, "system", f"[UNDO NOTICE] {res}")
 
 
 def run():

@@ -200,3 +200,34 @@ async def delete_file(path: str) -> str:
     await asyncio.to_thread(subprocess.run, ["gio", "trash", resolved])
     _log_operation("delete", resolved, "trash")
     return f"Moved to trash: {Path(resolved).name}"
+
+
+async def write_file(path: str, content: str) -> str:
+    """
+    Create a new file or overwrite an existing one with specific content.
+
+    Args:
+        path: The absolute or home-relative path of the file to write.
+        content: The full text content to write to the file.
+    """
+    ok, resolved = validate_path(path)
+    if not ok:
+        return resolved
+
+    p = Path(resolved)
+    action = "overwrite" if p.exists() else "create"
+
+    confirmed = await confirm.ask_file_action_confirmation(
+        action,
+        source_path=resolved,
+    )
+    if not confirmed.confirmed:
+        return f"File {action} cancelled by user confirmation. path={resolved}"
+
+    try:
+        p.write_text(content)
+        # Log as 'create' regardless of whether it was an overwrite for simple undo support
+        _log_operation("create", None, resolved)
+        return f"Successfully {action}ed {p.name}"
+    except Exception as e:
+        return f"Error writing file: {e}"

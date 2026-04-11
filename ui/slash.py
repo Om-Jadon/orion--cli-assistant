@@ -4,7 +4,7 @@ from pathlib import Path
 import shutil as _shutil
 from typing import Any
 
-from memory.store import get_last_operation, get_recent_turns, get_user_profile
+from memory.store import pop_last_operation, get_recent_turns, get_user_profile
 
 
 @dataclass
@@ -19,7 +19,7 @@ async def handle_slash(
     state: RuntimeState,
     conn,
     console,
-):
+) -> str | None:
     parts = cmd.strip().split()
     command = parts[0].lower() if parts else ""
 
@@ -42,8 +42,7 @@ async def handle_slash(
         return
 
     if command == "/undo":
-        await undo_last_operation(conn, console)
-        return
+        return await undo_last_operation(conn, console)
 
     if command == "/history":
         show_history(conn, state.session_id, console)
@@ -67,8 +66,8 @@ async def handle_slash(
     console.print(f"[error]Unknown command:[/error] {cmd}. Type /help for available commands.")
 
 
-async def undo_last_operation(conn, console):
-    last = get_last_operation(conn)
+async def undo_last_operation(conn, console) -> str | None:
+    last = pop_last_operation(conn)
     if not last:
         console.print("[dim]Nothing to undo.[/dim]")
         return
@@ -82,17 +81,81 @@ async def undo_last_operation(conn, console):
             console.print("[error]Operation metadata incomplete; cannot undo.[/error]")
             return
         if not Path(destination).exists():
-            console.print("[warning]Cannot undo: destination no longer exists.[/warning]")
+            console.print("[warning]Cannot undo: target no longer exists.[/warning]")
             return
         try:
             _shutil.move(destination, source)
-            console.print(f"[success]Undone: moved back to {source}[/success]")
+            msg = f"Undone: moved {Path(destination).name} back to {source}"
+            console.print(f"[success]{msg}[/success]")
+            return msg
         except (OSError, _shutil.Error) as exc:
             console.print(f"[error]Undo failed:[/error] {exc}")
         return
 
     if operation == "delete":
-        console.print("[dim]Deletion was moved to trash. Restore it from your file manager.[/dim]")
+        if not source:
+            console.print("[error]Deletion metadata incomplete; cannot undo.[/error]")
+            return
+        try:
+            import subprocess
+            
+            # gio trash --restore often requires the trash:/// URI, not the original path.
+            # We find it by matching the original path in 'gio trash --list'.
+            list_proc = await asyncio.to_thread(
+                subprocess.run, ["gio", "trash", "--list"], capture_output=True, text=True
+            )
+            
+            trash_uri = None
+            for line in list_proc.stdout.splitlines():
+                if "\t" in line:
+                    uri, path = line.split("\t", 1)
+                    if path.strip() == source:
+                        trash_uri = uri.strip()
+                        break
+            
+            # If we couldn't find a URI, fallback to the source path (best effort)
+            target = trash_uri or source
+
+            res = await asyncio.to_thread(
+                subprocess.run,
+                ["gio", "trash", "--restore", target],
+                capture_output=True,
+                text=True
+            )
+            if res.returncode == 0:
+                msg = f"Undone: restored {Path(source).name} from trash"
+                console.print(f"[success]{msg}.[/success]")
+                return msg
+            else:
+                err = res.stderr.strip() or "Is the file already restored?"
+                console.print(f"[error]Undo failed:[/error] {err}")
+        except Exception as exc:
+            console.print(f"[error]Undo failed:[/error] {exc}")
+        return
+
+    if operation == "create":
+        if not destination:
+            console.print("[error]Creation metadata incomplete; cannot undo.[/error]")
+            return
+        if not Path(destination).exists():
+            console.print("[warning]Cannot undo: created file no longer exists.[/warning]")
+            return
+        try:
+            import subprocess
+            res = await asyncio.to_thread(
+                subprocess.run,
+                ["gio", "trash", destination],
+                capture_output=True,
+                text=True
+            )
+            if res.returncode == 0:
+                msg = f"Undone: moved created file {Path(destination).name} to trash"
+                console.print(f"[success]{msg}.[/success]")
+                return msg
+            else:
+                console.print(f"[error]Undo failed:[/error] {res.stderr.strip()}")
+        except Exception as exc:
+            console.print(f"[error]Undo failed:[/error] {exc}")
         return
 
     console.print(f"[dim]Undo not supported for operation: {operation}[/dim]")
