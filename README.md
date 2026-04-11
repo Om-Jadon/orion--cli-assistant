@@ -16,7 +16,7 @@ It supports cloud providers (OpenAI, Anthropic, Gemini, Groq, Mistral) through p
 - One-shot mode for direct commands.
 - Pipe mode for log and text analysis from stdin.
 - Slash commands for runtime control:
-  - /help, /think, /clear, /undo, /history, /memory, /scan, /exit
+  - /help, /think, /clear, /undo, /reset, /history, /memory, /scan, /exit
 - Hybrid memory retrieval:
   - SQLite conversation/profile store
   - FTS5 keyword retrieval
@@ -46,7 +46,6 @@ The runtime is split into focused layers:
   - memory/store.py conversation/profile/operation persistence
   - memory/retrieval.py hybrid FTS + vector search
   - memory/indexer.py home file metadata indexing
-  - memory/extractor.py profile fact extraction
   - memory/embeddings.py fastembed vector generation using config-sourced model settings
 - Tools:
   - tools/files.py, tools/shell.py, tools/browser.py, tools/search.py, tools/media.py (including hardened file-search fallback behavior)

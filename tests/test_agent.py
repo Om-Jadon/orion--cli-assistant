@@ -96,4 +96,5 @@ def test_system_prompt_instructs_no_retry_after_cancelled_confirmation():
         assert "do not ask follow-up confirmation questions" in system_prompt.lower()
         assert "tools handle confirmations" in system_prompt.lower()
         assert "tool outputs explicitly state whether confirmation was approved or denied" in system_prompt.lower()
-        assert "confirmation denied" in system_prompt.lower()
+        # Rule was consolidated into the above line
+        assert "authoritative user intent" in system_prompt.lower()

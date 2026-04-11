@@ -14,6 +14,12 @@ def save_turn(conn: sqlite3.Connection, session_id: str, role: str,
     conn.commit()
 
 
+def delete_session_history(conn: sqlite3.Connection, session_id: str):
+    """Permanently delete all conversation turns for a given session."""
+    conn.execute("DELETE FROM conversations WHERE session_id = ?", (session_id,))
+    conn.commit()
+
+
 def get_recent_turns(conn: sqlite3.Connection, session_id: str,
                      max_tokens: int = CONTEXT_RECENT) -> str:
     rows = conn.execute(
@@ -61,6 +67,13 @@ def get_user_profile(conn: sqlite3.Connection) -> dict:
         "SELECT key, value FROM user_profile ORDER BY confidence DESC"
     ).fetchall()
     return {row["key"]: row["value"] for row in rows}
+
+
+def delete_profile_key(conn: sqlite3.Connection, key: str) -> bool:
+    """Delete a specific key from the user profile. Returns True if successful."""
+    res = conn.execute("DELETE FROM user_profile WHERE key = ?", (key,))
+    conn.commit()
+    return res.rowcount > 0
 
 
 def log_operation(conn: sqlite3.Connection, operation: str,

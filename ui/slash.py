@@ -31,6 +31,7 @@ async def handle_slash(
         console.print("  [dim]/clear[/dim]      clear the terminal")
         console.print("  [dim]/undo[/dim]       undo last file operation")
         console.print("  [dim]/history[/dim]    show this session's conversation")
+        console.print("  [dim]/reset[/dim]      clear current conversation context")
         console.print("  [dim]/memory[/dim]     show what orion knows about you")
         console.print("  [dim]/scan[/dim]       re-index your home directory")
         console.print("  [dim]/exit[/dim]       quit orion")
@@ -46,6 +47,12 @@ async def handle_slash(
 
     if command == "/history":
         show_history(conn, state.session_id, console)
+        return
+
+    if command == "/reset":
+        from memory.store import delete_session_history
+        delete_session_history(conn, state.session_id)
+        console.print("[success]Conversation context cleared.[/success]")
         return
 
     if command == "/memory":

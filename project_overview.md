@@ -32,6 +32,9 @@ All planned stages are implemented (Stage 1 through Stage 7), including the foll
 - CLI routing integration tests.
 - Directory listing truncation notice.
 - Structured debug logging to file.
+- **Robust Stack-based Undo**: Multi-step file operation reversal with native trash restoration.
+- **Agentic Memory Management**: Unified AI-driven profile persistence replacing brittle background scanning.
+- **Dynamic UI Spinners**: Context-aware tool status labels for real-time feedback.
 
 ## Core Stack
 
@@ -165,7 +168,7 @@ ui/slash.py:
 
 - Slash command router and handlers.
 - RuntimeState container for think_mode, agent instance, session_id.
-- Commands: /help /think /clear /undo /history /memory /scan /exit /quit.
+- Commands: /help /think /clear /undo /reset /history /memory /scan /exit /quit.
 
 ### 4) Memory Layer
 
@@ -188,8 +191,8 @@ Schema includes:
 memory/store.py:
 
 - Conversation persistence.
-- Profile upsert/read.
-- Operation log write/read for undo.
+- Profile upsert/delete/read.
+- Operation log write/read for stack-based undo.
 
 memory/embeddings.py:
 
@@ -206,10 +209,6 @@ memory/indexer.py:
 
 - Incremental home-directory metadata scan.
 - Extension filtering and inferred tags.
-
-memory/extractor.py:
-
-- Extracts user-profile facts from turns into user_profile store.
 
 core/context.py assembles three-tier context for each turn:
 
@@ -241,6 +240,10 @@ tools/browser.py:
 tools/search.py:
 
 - DuckDuckGo-backed web search (formatted and raw variants).
+
+tools/memory_tool.py:
+
+- manage_user_memory: Unified tool for the AI to intentionally upsert or delete facts from the permanent profile.
 
 tools/media.py:
 
@@ -280,6 +283,7 @@ safety/confirm.py:
 - /think
 - /clear
 - /undo
+- /reset
 - /history
 - /memory
 - /scan
@@ -328,7 +332,6 @@ cli-assistant/
 │   ├── __init__.py
 │   ├── db.py
 │   ├── embeddings.py
-│   ├── extractor.py
 │   ├── indexer.py
 │   ├── retrieval.py
 │   └── store.py
@@ -349,7 +352,6 @@ cli-assistant/
 │   ├── test_main.py
 │   ├── test_memory_db.py
 │   ├── test_memory_embeddings.py
-│   ├── test_memory_extractor.py
 │   ├── test_memory_indexer.py
 │   ├── test_memory_retrieval.py
 │   ├── test_memory_store.py
@@ -367,6 +369,7 @@ cli-assistant/
 │   ├── __init__.py
 │   ├── browser.py
 │   ├── files.py
+│   ├── memory_tool.py
 │   ├── media.py
 │   ├── search.py
 │   └── shell.py

@@ -23,6 +23,12 @@ ORION_DIR.mkdir(parents=True, exist_ok=True)
 logging.basicConfig(level=logging.DEBUG, filename=str(ORION_DIR / "debug.log"))
 trace_logging.initialize()
 
+# --version flag (before global state init)
+if len(sys.argv) > 1 and sys.argv[1] in ("--version", "-v"):
+    from config import __version__
+    print(f"Orion CLI v{__version__}")
+    sys.exit(0)
+
 state = slash.RuntimeState(
     agent=build_agent(),
     session_id=str(uuid.uuid4()),

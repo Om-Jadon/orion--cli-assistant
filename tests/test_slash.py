@@ -110,7 +110,8 @@ async def test_exit_raises_system_exit():
 @pytest.mark.asyncio
 async def test_undo_no_last_operation_prints_message():
     printed = []
-    with patch("main.slash.get_last_operation", return_value=None), \
+    # In ui/slash.py, we call pop_last_operation which is imported from memory.store
+    with patch("ui.slash.pop_last_operation", return_value=None), \
          patch("main.console") as mock_console:
         mock_console.print = lambda *a, **kw: printed.append(a[0] if a else "")
         await main.slash.undo_last_operation(main.conn, main.console)
@@ -120,9 +121,9 @@ async def test_undo_no_last_operation_prints_message():
 @pytest.mark.asyncio
 async def test_undo_move_reverses_destination_to_source():
     op = {"operation": "move", "source": "/tmp/source.txt", "destination": "/tmp/dest.txt"}
-    with patch("main.slash.get_last_operation", return_value=op), \
-         patch("main.slash.Path.exists", return_value=True), \
-         patch("main.slash._shutil.move") as mock_move:
+    with patch("ui.slash.pop_last_operation", return_value=op), \
+         patch("ui.slash.Path.exists", return_value=True), \
+         patch("ui.slash._shutil.move") as mock_move:
         await main.slash.undo_last_operation(main.conn, main.console)
     mock_move.assert_called_once_with("/tmp/dest.txt", "/tmp/source.txt")
 
@@ -131,7 +132,7 @@ async def test_undo_move_reverses_destination_to_source():
 async def test_undo_delete_prints_restore_hint():
     op = {"operation": "delete", "source": "/tmp/source.txt", "destination": "trash"}
     printed = []
-    with patch("main.slash.get_last_operation", return_value=op), \
+    with patch("ui.slash.pop_last_operation", return_value=op), \
          patch("main.console") as mock_console:
         mock_console.print = lambda *a, **kw: printed.append(a[0] if a else "")
         await main.slash.undo_last_operation(main.conn, main.console)

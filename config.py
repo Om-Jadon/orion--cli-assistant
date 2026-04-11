@@ -2,6 +2,7 @@ import sys as _sys
 import tomllib
 from pathlib import Path
 
+__version__ = "0.1.0"
 HOME          = Path.home()
 ORION_DIR     = HOME / ".orion"
 DB_PATH       = ORION_DIR / "memory.db"

@@ -37,10 +37,8 @@ async def open_url(url: str) -> str:
 
 async def fetch_page(url: str) -> str:
     """
-    Extract clean text from a web page.
-
-    Tier 1: Trafilatura (fast, no browser)
-    Tier 2: Playwright (for JS-heavy pages or weak Tier-1 extracts)
+    Extract and return the readable text content from a web page.
+    Use this to read the details of a specific site after finding it via search.
     """
     if not _is_online():
         return "Offline: cannot fetch pages right now."

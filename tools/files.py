@@ -44,6 +44,7 @@ def _classify_move_action(src: str, dst: str) -> str:
 async def find_files(query: str) -> str:
     """
     Search for files matching a name or keyword pattern.
+    MANDATORY: Use this first to locate a file before reading, opening, or deleting it.
 
     Args:
         query: The filename, extension, or keyword to search for (e.g. 'resume.pdf', '.py', 'notes').

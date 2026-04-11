@@ -174,7 +174,8 @@ def _requires_shell_confirmation(command: str) -> bool:
 async def run_shell(command: str) -> str:
     """
     Execute a shell command safely and return its output.
-    Use file tools (find_files, read_file, etc.) for file operations — only use this for everything else.
+    IMPORTANT: Use dedicated file tools (find_files, write_file, move_file, etc.) for any file-related operations. 
+    Use run_shell ONLY for system commands, package management, or specialized CLI tools.
     Blocked: sudo, rm -rf, writes outside home.
 
     Args:

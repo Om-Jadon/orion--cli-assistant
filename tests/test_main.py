@@ -48,7 +48,6 @@ async def test_run_once_resets_confirmation_turn_state_before_agent_run():
     with patch("main.safety_confirm.reset_turn_state") as mock_reset, \
          patch("main.print_user"), \
          patch("main.save_turn"), \
-         patch("main.extract_and_store"), \
          patch("main.build_context", new=AsyncMock(return_value="ctx")), \
          patch("main.run_with_streaming", new=AsyncMock(return_value="ok")), \
          patch("main.print_separator"):
@@ -64,7 +63,6 @@ async def test_run_once_emits_trace_turn_start_and_end():
          patch("main.safety_confirm.reset_turn_state"), \
          patch("main.print_user"), \
          patch("main.save_turn"), \
-         patch("main.extract_and_store"), \
          patch("main.build_context", new=AsyncMock(return_value="ctx")), \
          patch("main.run_with_streaming", new=AsyncMock(return_value="ok")), \
          patch("main.print_separator"):

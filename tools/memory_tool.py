@@ -1,5 +1,6 @@
 import sqlite3
-from memory.store import upsert_profile
+from typing import Literal
+from memory.store import upsert_profile, delete_profile_key
 
 _conn = None
 
@@ -8,13 +9,19 @@ def set_connection(conn: sqlite3.Connection):
     global _conn
     _conn = conn
 
-async def remember_user_fact(key: str, value: str) -> str:
+async def manage_user_memory(
+    action: Literal["upsert", "delete"], 
+    key: str, 
+    value: str = None
+) -> str:
     """
-    Intentionally persist a meaningful fact about the user for future sessions.
+    Intentionally manage facts about the user for future sessions.
+    MANDATORY: You MUST use this tool to persist or remove facts. Never just claim to remember something in text.
     
     Args:
-        key: A concise identifier for the fact (e.g., 'name', 'role', 'preference', 'project_context').
-        value: The detailed information to remember.
+        action: 'upsert' to add/update, 'delete' to remove.
+        key: A concise identifier for the fact (e.g., 'name', 'role', 'preference', 'project').
+        value: The information to remember (required for 'upsert'). Use 'None' for 'delete'.
     """
     global _conn
     if _conn is None:
@@ -22,9 +29,21 @@ async def remember_user_fact(key: str, value: str) -> str:
         _conn = get_connection()
     
     try:
-        # We use a high confidence (1.0) because the LLM has explicitly 
-        # decided this is a fact worth remembering.
-        upsert_profile(_conn, key, value, confidence=1.0)
-        return f"Learned that your {key} is: {value}"
+        if action == "upsert":
+            if not value:
+                return "Error: value is required when action is 'upsert'."
+            upsert_profile(_conn, key, value, confidence=1.0)
+            return f"Successfully learned that your {key} is: {value}"
+        
+        elif action == "delete":
+            existed = delete_profile_key(_conn, key)
+            if existed:
+                return f"Successfully forgotten: {key}"
+            else:
+                return f"No information found for key: {key}"
+        
+        else:
+            return f"Error: unknown action '{action}'. Use 'upsert' or 'delete'."
+            
     except Exception as e:
-        return f"Error remembering fact: {e}"
+        return f"Error managing memory: {e}"
