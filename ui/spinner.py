@@ -16,6 +16,11 @@ async def stop_active_spinner():
     if _ACTIVE_SPINNER is not None:
         await _ACTIVE_SPINNER.stop()
 
+def update_label(label: str):
+    global _ACTIVE_SPINNER
+    if _ACTIVE_SPINNER is not None:
+        _ACTIVE_SPINNER.update(label)
+
 class Spinner:
     """Asyncio-native spinner — no threads, no race conditions with asyncio."""
 

@@ -6,6 +6,7 @@ from pathlib import Path
 from pydantic_ai import Agent
 from config import MODEL_STRING
 from core import trace_logging as trace_logging
+from ui.spinner import update_label
 
 
 def build_agent(model_string_override: str | None = None) -> Agent:
@@ -79,12 +80,31 @@ RULES:
 """
 
 
+TOOL_LABELS = {
+    "find_files": "Searching files...",
+    "list_directory": "Listing directory contents...",
+    "read_file": "Reading file contents...",
+    "open_file": "Opening file...",
+    "move_file": "Moving file...",
+    "delete_file": "Moving to trash...",
+    "run_shell": "Running command...",
+    "open_url": "Opening browser...",
+    "fetch_page": "Reading website...",
+    "web_search": "Searching web...",
+    "open_media": "Searching media...",
+}
+
+
 def _wrap_tool_for_trace(tool):
     if inspect.iscoroutinefunction(tool):
         @functools.wraps(tool)
         async def _wrapped(*args, **kwargs):
+            tool_name = tool.__name__
+            label = TOOL_LABELS.get(tool_name, f"calling {tool_name}")
+            update_label(label)
+            
             tool_call_id = trace_logging.log_tool_call_start(
-                tool_name=tool.__name__,
+                tool_name=tool_name,
                 args=args,
                 kwargs=kwargs,
             )
@@ -94,7 +114,7 @@ def _wrap_tool_for_trace(tool):
                 elapsed_ms = int((time.perf_counter() - started) * 1000)
                 trace_logging.log_tool_call_end(
                     tool_call_id=tool_call_id,
-                    tool_name=tool.__name__,
+                    tool_name=tool_name,
                     status="ok",
                     result=result,
                     elapsed_ms=elapsed_ms,
@@ -104,19 +124,25 @@ def _wrap_tool_for_trace(tool):
                 elapsed_ms = int((time.perf_counter() - started) * 1000)
                 trace_logging.log_tool_call_end(
                     tool_call_id=tool_call_id,
-                    tool_name=tool.__name__,
+                    tool_name=tool_name,
                     status="error",
                     error=str(e),
                     elapsed_ms=elapsed_ms,
                 )
                 raise
+            finally:
+                update_label("thinking")
 
         return _wrapped
 
     @functools.wraps(tool)
     def _wrapped_sync(*args, **kwargs):
+        tool_name = tool.__name__
+        label = TOOL_LABELS.get(tool_name, f"calling {tool_name}")
+        update_label(label)
+
         tool_call_id = trace_logging.log_tool_call_start(
-            tool_name=tool.__name__,
+            tool_name=tool_name,
             args=args,
             kwargs=kwargs,
         )
@@ -126,7 +152,7 @@ def _wrap_tool_for_trace(tool):
             elapsed_ms = int((time.perf_counter() - started) * 1000)
             trace_logging.log_tool_call_end(
                 tool_call_id=tool_call_id,
-                tool_name=tool.__name__,
+                tool_name=tool_name,
                 status="ok",
                 result=result,
                 elapsed_ms=elapsed_ms,
@@ -136,11 +162,13 @@ def _wrap_tool_for_trace(tool):
             elapsed_ms = int((time.perf_counter() - started) * 1000)
             trace_logging.log_tool_call_end(
                 tool_call_id=tool_call_id,
-                tool_name=tool.__name__,
+                tool_name=tool_name,
                 status="error",
                 error=str(e),
                 elapsed_ms=elapsed_ms,
             )
             raise
+        finally:
+            update_label("thinking")
 
     return _wrapped_sync
