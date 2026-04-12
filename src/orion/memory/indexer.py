@@ -1,7 +1,7 @@
 import os
 import sqlite3
 from pathlib import Path
-from orion.config import HOME
+from orion import config
 
 INDEXED_EXTENSIONS = {
     ".pdf", ".pptx", ".ppt", ".docx", ".doc",
@@ -9,8 +9,14 @@ INDEXED_EXTENSIONS = {
 }
 
 def scan_home(conn: sqlite3.Connection, verbose: bool = False):
-    """Incremental scan — only processes files changed since last index."""
-    for root, dirs, files in os.walk(HOME):
+    """Convenience wrapper to scan the user's HOME directory."""
+    scan_directory(conn, config.HOME, verbose)
+
+
+def scan_directory(conn: sqlite3.Connection, base_path: Path | str, verbose: bool = False):
+    """Incremental scan of a given directory."""
+    target = Path(base_path).expanduser().resolve()
+    for root, dirs, files in os.walk(target):
         dirs[:] = [d for d in dirs if not d.startswith(".")]
         for filename in files:
             path = Path(root) / filename

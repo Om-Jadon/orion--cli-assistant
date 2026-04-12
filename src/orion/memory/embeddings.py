@@ -1,7 +1,7 @@
 import asyncio
 import struct
 from fastembed import TextEmbedding
-from orion.config import EMBED_DIM, EMBED_MODEL
+from orion import config
 
 _model: TextEmbedding | None = None
 _model_lock = asyncio.Lock()
@@ -11,14 +11,14 @@ async def _get_model() -> TextEmbedding:
     if _model is None:
         async with _model_lock:
             if _model is None:
-                _model = await asyncio.to_thread(TextEmbedding, EMBED_MODEL)
+                _model = await asyncio.to_thread(TextEmbedding, config.EMBED_MODEL)
     return _model
 
 
 async def embed(text: str) -> list[float]:
     model = await _get_model()
     vector = await asyncio.to_thread(lambda: next(model.embed([text])))
-    return vector[:EMBED_DIM].tolist()
+    return vector[:config.EMBED_DIM].tolist()
 
 
 def serialize(floats: list[float]) -> bytes:

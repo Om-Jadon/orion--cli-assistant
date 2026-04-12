@@ -3,7 +3,7 @@ import logging
 import sys
 import uuid
 from time import perf_counter
-from orion.ui.renderer import console, print_user, print_separator
+from orion.ui.renderer import console, print_user, print_separator, refresh_console_settings
 from orion.ui.input import build_session, get_input
 from orion.ui.startup import show_startup
 from orion.ui import slash
@@ -12,8 +12,7 @@ from orion.core.streaming import run_with_streaming
 from orion.core.context import build_context
 from orion.memory.db import get_connection
 from orion.memory.store import save_turn
-from orion.config import MODEL_STRING, ORION_DIR
-from orion.config import TRACE_LOG_RETENTION_DAYS
+from orion import config
 from orion.core import trace_logging as trace_logging
 from orion.tools import files as file_tools
 from orion.tools import memory_tool
@@ -21,8 +20,8 @@ from orion.safety import confirm as safety_confirm
 
 def setup_runtime():
     """Initializes global state for the application."""
-    ORION_DIR.mkdir(parents=True, exist_ok=True)
-    logging.basicConfig(level=logging.DEBUG, filename=str(ORION_DIR / "debug.log"))
+    config.ORION_DIR.mkdir(parents=True, exist_ok=True)
+    logging.basicConfig(level=logging.DEBUG, filename=str(config.ORION_DIR / "debug.log"))
     trace_logging.initialize()
 
     global state, conn
@@ -38,13 +37,90 @@ def setup_runtime():
 
 def cli_entry():
     """Synchronous entry point for the generated CLI tool."""
-    # --version flag (checks before full setup)
-    if len(sys.argv) > 1 and sys.argv[1] in ("--version", "-v"):
-        from orion.config import __version__
-        print(f"Orion CLI v{__version__}")
-        sys.exit(0)
+    # 1. Standard Utility Flags (check before ANY other setup)
+    if len(sys.argv) > 1:
+        flag = sys.argv[1].lower()
+        if flag in ("--help", "-h"):
+            print("""
+Orion CLI Assistant — Terminal-first AI intelligence for Linux
 
-    setup_runtime()
+Usage:
+  orion [options] [prompt]
+
+Options:
+  -h, --help      Show this help message and exit
+  -v, --version   Show program version and exit
+
+Modes:
+  Interactive     Start a chat session (run 'orion' with no prompt)
+  One-shot        Run a single request (run 'orion "your prompt"')
+  Pipe            Analyze stdin stream (run 'cat log.txt | orion "analyze"')
+
+Slash Commands (in Interactive Mode):
+  /help           Show session help
+  /clear          Clear the terminal screen
+  /undo           Revert the last exchanges
+  /reset          Clear current conversation context
+  /memory         View or clear profile facts
+  /scan [path]    Index folder metadata for retrieval
+  /history        List recent session IDs
+  /exit           Terminate the session
+
+Configuration:
+  Settings are stored in ~/.orion/config.toml. 
+  Orion will guide you through setup on first launch.
+""")
+            sys.exit(0)
+        
+        if flag in ("--version", "-v"):
+            print(f"Orion CLI v{config.__version__}")
+            sys.exit(0)
+
+    # 2. First-run Onboarding Check
+    if not config.is_config_ready():
+        from orion.ui.onboarding import run_onboarding
+        model_string, api_key, name, prefs, scan_dir = run_onboarding()
+
+        if api_key is None:
+            # Result of KeyboardInterrupt or cancellation
+            console.print("\n  [#6C7086]onboarding cancelled.[/#6C7086]\n")
+            sys.exit(0)
+
+        if not api_key:
+            console.print("\n  [#F38BA8]Error: API key is required to use Orion.[/#F38BA8]")
+            sys.exit(1)
+
+        if not config.save_config(model_string, api_key):
+            console.print("[#F38BA8]Error: Could not save configuration to ~/.orion/config.toml[/#F38BA8]")
+            sys.exit(1)
+
+        # Reload configuration constants after saving
+        config.reload_config()
+        refresh_console_settings()
+
+        # Initialize the environment immediately for this process
+        provider = model_string.split(":")[0]
+        env_var = config.CLOUD_API_KEY_VARS.get(provider)
+        if env_var:
+            import os
+            os.environ[env_var] = api_key
+
+        # 2. Early setup for profile/indexing
+        setup_runtime()
+        
+        from orion.memory.store import upsert_profile
+        if name:
+            upsert_profile(conn, "user_name", name)
+        if prefs:
+            upsert_profile(conn, "user_preferences", prefs)
+        
+        if scan_dir:
+            from orion.memory.indexer import scan_directory
+            with console.status(f"[bold blue]Indexing {scan_dir}...[/bold blue]"):
+                scan_directory(conn, scan_dir)
+    else:
+        # Normal startup
+        setup_runtime()
 
     try:
         asyncio.run(main())
@@ -84,7 +160,7 @@ def _run_log_retention_cleanup():
         logging.debug(
             "Trace log retention removed %s file(s) older than %s days.",
             deleted,
-            TRACE_LOG_RETENTION_DAYS,
+            config.TRACE_LOG_RETENTION_DAYS,
         )
 
 
@@ -143,7 +219,7 @@ async def main():
             raise
         return
 
-    display_model = MODEL_STRING
+    display_model = config.MODEL_STRING
     show_startup(console, display_model)
     session = build_session()
 

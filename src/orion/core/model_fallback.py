@@ -8,6 +8,19 @@ GROQ_TOKEN_LIMIT_FALLBACK_MODELS: tuple[str, ...] = (
 
 )
 
+# Project-wide recommended models (used for onboarding defaults).
+RECOMMENDED_MODELS: dict[str, str] = {
+    "openai":    "openai:gpt-4o",
+    "anthropic": "anthropic:claude-3-5-sonnet-latest",
+    "groq":      GROQ_TOKEN_LIMIT_FALLBACK_MODELS[0],
+    "gemini":    "gemini:gemini-3.0-flash",
+}
+
 
 def get_groq_token_limit_fallback_models() -> tuple[str, ...]:
     return GROQ_TOKEN_LIMIT_FALLBACK_MODELS
+
+
+def get_recommended_model(provider: str) -> str:
+    """Returns the primary recommended model for a given provider."""
+    return RECOMMENDED_MODELS.get(provider.lower(), "")

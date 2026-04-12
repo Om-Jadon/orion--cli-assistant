@@ -3,10 +3,10 @@ from prompt_toolkit.history import FileHistory
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.formatted_text import HTML
 from prompt_toolkit.key_binding import KeyBindings
-from orion.config import HISTORY_FILE
+from orion import config
 
 def build_session() -> PromptSession:
-    HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
+    config.HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
     bindings = KeyBindings()
 
     @bindings.add("c-l")
@@ -18,7 +18,7 @@ def build_session() -> PromptSession:
         event.app.exit(exception=KeyboardInterrupt())
 
     return PromptSession(
-        history=FileHistory(str(HISTORY_FILE)),
+        history=FileHistory(str(config.HISTORY_FILE)),
         auto_suggest=AutoSuggestFromHistory(),
         key_bindings=bindings,
         multiline=False,

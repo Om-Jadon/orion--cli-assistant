@@ -41,7 +41,7 @@ def _reload_agent():
 def test_build_agent_cloud_passes_model_string_to_agent():
     """Cloud builder passes model string directly to Agent()."""
     ca = _reload_agent()
-    with patch("orion.core.agent.MODEL_STRING", "openai:gpt-4o"), \
+    with patch("orion.config.MODEL_STRING", "openai:gpt-4o"), \
          patch("orion.core.agent.Agent") as mock_ac:
         mock_ac.return_value = MagicMock()
         ca.build_agent()
@@ -53,7 +53,7 @@ def test_build_agent_cloud_passes_model_string_to_agent():
 
 def test_build_agent_cloud_with_empty_model_string_raises_value_error():
     ca = _reload_agent()
-    with patch("orion.core.agent.MODEL_STRING", ""), \
+    with patch("orion.config.MODEL_STRING", ""), \
          pytest.raises(ValueError):
         ca.build_agent()
 
@@ -61,7 +61,7 @@ def test_build_agent_cloud_with_empty_model_string_raises_value_error():
 def test_build_agent_cloud_no_extra_body():
     """Cloud path must keep only cloud model_settings and avoid local extra_body."""
     ca = _reload_agent()
-    with patch("orion.core.agent.MODEL_STRING", "groq:llama-3.3-70b-versatile"), \
+    with patch("orion.config.MODEL_STRING", "groq:llama-3.3-70b-versatile"), \
          patch("orion.core.agent.Agent") as mock_ac:
         mock_ac.return_value = MagicMock()
         ca.build_agent()
@@ -73,7 +73,7 @@ def test_build_agent_cloud_no_extra_body():
 def test_build_agent_cloud_uses_model_override_when_provided():
     """Cloud path must honor explicit model override for fallback attempts."""
     ca = _reload_agent()
-    with patch("orion.core.agent.MODEL_STRING", "groq:openai/gpt-oss-120b"), \
+    with patch("orion.config.MODEL_STRING", "groq:openai/gpt-oss-120b"), \
          patch("orion.core.agent.Agent") as mock_ac:
         mock_ac.return_value = MagicMock()
         ca.build_agent(model_string_override="groq:qwen/qwen3-32b")
@@ -85,7 +85,7 @@ def test_build_agent_cloud_uses_model_override_when_provided():
 
 def test_system_prompt_instructs_no_retry_after_cancelled_confirmation():
     ca = _reload_agent()
-    with patch("orion.core.agent.MODEL_STRING", "openai:gpt-4o"), \
+    with patch("orion.config.MODEL_STRING", "openai:gpt-4o"), \
          patch("orion.core.agent.Agent") as mock_ac:
         mock_ac.return_value = MagicMock()
         ca.build_agent()

@@ -36,3 +36,7 @@ dev = [
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 pythonpath   = ["src"]
+filterwarnings = [
+    "error",
+    "ignore:Exception ignored in.*coroutine object main:pytest.PytestUnraisableExceptionWarning",
+]

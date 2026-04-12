@@ -6,9 +6,9 @@ from datetime import datetime, timedelta, timezone
 def test_trace_logging_writes_ordered_flow_events(tmp_path, monkeypatch):
     from orion.core import trace_logging as tl
 
-    monkeypatch.setattr(tl, "TRACE_LOGGING_ENABLED", True)
-    monkeypatch.setattr(tl, "TRACE_LOG_DIR", tmp_path)
-    monkeypatch.setattr(tl, "TRACE_LOG_RETENTION_DAYS", 7)
+    monkeypatch.setattr(tl.config, "TRACE_LOGGING_ENABLED", True)
+    monkeypatch.setattr(tl.config, "TRACE_LOG_DIR", tmp_path)
+    monkeypatch.setattr(tl.config, "TRACE_LOG_RETENTION_DAYS", 7)
 
     tl.initialize()
     tl.set_session_id("session-1")
@@ -54,9 +54,9 @@ def test_trace_logging_writes_ordered_flow_events(tmp_path, monkeypatch):
 def test_trace_logging_cleanup_removes_files_older_than_retention(tmp_path, monkeypatch):
     from orion.core import trace_logging as tl
 
-    monkeypatch.setattr(tl, "TRACE_LOGGING_ENABLED", True)
-    monkeypatch.setattr(tl, "TRACE_LOG_DIR", tmp_path)
-    monkeypatch.setattr(tl, "TRACE_LOG_RETENTION_DAYS", 7)
+    monkeypatch.setattr(tl.config, "TRACE_LOGGING_ENABLED", True)
+    monkeypatch.setattr(tl.config, "TRACE_LOG_DIR", tmp_path)
+    monkeypatch.setattr(tl.config, "TRACE_LOG_RETENTION_DAYS", 7)
 
     old_file = tmp_path / "trace-old.jsonl"
     new_file = tmp_path / "trace-new.jsonl"
@@ -79,9 +79,9 @@ def test_trace_logging_cleanup_removes_files_older_than_retention(tmp_path, monk
 def test_trace_logging_writes_retry_and_error_fallback_metadata(tmp_path, monkeypatch):
     from orion.core import trace_logging as tl
 
-    monkeypatch.setattr(tl, "TRACE_LOGGING_ENABLED", True)
-    monkeypatch.setattr(tl, "TRACE_LOG_DIR", tmp_path)
-    monkeypatch.setattr(tl, "TRACE_LOG_RETENTION_DAYS", 7)
+    monkeypatch.setattr(tl.config, "TRACE_LOGGING_ENABLED", True)
+    monkeypatch.setattr(tl.config, "TRACE_LOG_DIR", tmp_path)
+    monkeypatch.setattr(tl.config, "TRACE_LOG_RETENTION_DAYS", 7)
 
     tl.initialize()
     tl.set_session_id("session-fallback")

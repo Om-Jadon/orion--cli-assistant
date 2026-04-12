@@ -4,7 +4,7 @@ import sqlite3
 import shutil
 import subprocess
 from pathlib import Path
-from orion.config import HOME
+from orion import config
 from orion.safety.boundaries import validate_path
 from orion.safety import confirm
 
@@ -70,7 +70,7 @@ async def find_files(query: str) -> str:
     try:
         out = await asyncio.to_thread(
             subprocess.run,
-            ["find", str(HOME), "-maxdepth", "8", "-not", "-path", "*/.*", "-iname", f"*{query}*"],
+            ["find", str(config.HOME), "-maxdepth", "8", "-not", "-path", "*/.*", "-iname", f"*{query}*"],
             capture_output=True,
             text=True,
             timeout=5,
@@ -90,7 +90,7 @@ async def list_directory(path: str) -> str:
     Args:
         path: The directory path to list. Use '~' for home, or provide an absolute path.
     """
-    target = Path(path).expanduser() if path and path != "~" else HOME
+    target = Path(path).expanduser() if path and path != "~" else config.HOME
     ok, resolved = validate_path(str(target))
     if not ok:
         return resolved

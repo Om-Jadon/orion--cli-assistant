@@ -1,3 +1,4 @@
+import os
 import sys as _sys
 import tomllib
 from pathlib import Path
@@ -15,6 +16,44 @@ CONFIG_FILE = (
     if _mod is not None and hasattr(_mod, "CONFIG_FILE")
     else ORION_DIR / "config.toml"
 )
+
+def is_config_ready() -> bool:
+    """Check if the user has a valid configuration and API key."""
+    if not CONFIG_FILE.exists():
+        return False
+    try:
+        with open(CONFIG_FILE, "rb") as f:
+            data = tomllib.load(f)
+        # Check for absolutely required fields
+        if not data.get("model_string"):
+            return False
+        # api_key can be in config or in env; but is_config_ready usually means "set up"
+        # We'll stick to model_string as the main 'readiness' indicator for onboarding
+        return True
+    except Exception:
+        return False
+
+def save_config(model_string: str, api_key: str) -> bool:
+    """Write the basic configuration to TOML safely."""
+    import json
+    try:
+        ORION_DIR.mkdir(parents=True, exist_ok=True)
+        # We use json.dumps for safe TOML string quoting/escaping
+        config_content = f"""# Orion CLI Configuration
+# Auto-generated during initial onboarding.
+model_string = {json.dumps(model_string)}
+api_key = {json.dumps(api_key)}
+"""
+        CONFIG_FILE.write_text(config_content, encoding="utf-8")
+        os.chmod(CONFIG_FILE, 0o600)
+        return True
+    except Exception:
+        return False
+
+def reload_config():
+    """Reload the module-level configuration state."""
+    import importlib
+    importlib.reload(_sys.modules[__name__])
 
 _defaults = {
     "theme": "mocha",
@@ -43,11 +82,10 @@ def _load_user_config() -> dict:
         try:
             with open(CONFIG_FILE, "rb") as f:
                 return tomllib.load(f)
-        except tomllib.TOMLDecodeError as e:
-            raise SystemExit(
-                f"Error: {CONFIG_FILE} contains invalid TOML.\n{e}\n"
-                "Fix the file or delete it to use defaults."
-            ) from e
+        except Exception:
+            # If it passed is_config_ready() but fails here, 
+            # we fall back to defaults rather than crashing.
+            return {}
     return {}
 
 _user = _load_user_config()
@@ -70,17 +108,13 @@ else:
 
 # --- Cloud provider support ---
 
-def _require_model_string(value: object) -> str:
+def _get_model_string(value: object) -> str | None:
     if isinstance(value, str) and value.strip():
         return value.strip()
-    raise SystemExit(
-        "Error: model_string is required in ~/.orion/config.toml.\n"
-        "Example: model_string = \"openai:gpt-4o-mini\"\n"
-        "Supported prefixes: openai:, anthropic:, gemini-, groq:, mistral:"
-    )
+    return None
 
 
-MODEL_STRING: str = _require_model_string(_user.get("model_string"))
+MODEL_STRING: str | None = _get_model_string(_user.get("model_string"))
 
 CLOUD_API_KEY_VARS: dict[str, str] = {
     "openai":    "OPENAI_API_KEY",
@@ -90,7 +124,9 @@ CLOUD_API_KEY_VARS: dict[str, str] = {
     "mistral":   "MISTRAL_API_KEY",
 }
 
-def _detect_provider(model_string: str) -> str:
+def _detect_provider(model_string: str | None) -> str | None:
+    if not model_string:
+        return None
     if model_string.startswith("openai:"):
         return "openai"
     if model_string.startswith("anthropic:"):
@@ -101,12 +137,9 @@ def _detect_provider(model_string: str) -> str:
         return "groq"
     if model_string.startswith("mistral:"):
         return "mistral"
-    raise SystemExit(
-        f"Error: unsupported model_string {model_string!r}.\n"
-        "Supported prefixes: openai:, anthropic:, gemini-, groq:, mistral:"
-    )
+    return None
 
-PROVIDER: str = _detect_provider(MODEL_STRING)
+PROVIDER: str | None = _detect_provider(MODEL_STRING)
 
 EMBED_MODEL        = "BAAI/bge-small-en-v1.5"  # fastembed local model, no Ollama needed
 EMBED_DIM          = 384   # bge-small-en-v1.5 output dimension

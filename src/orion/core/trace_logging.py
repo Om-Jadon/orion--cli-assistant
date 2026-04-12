@@ -7,7 +7,7 @@ from contextvars import ContextVar
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from orion.config import TRACE_LOGGING_ENABLED, TRACE_LOG_DIR, TRACE_LOG_RETENTION_DAYS
+from orion import config
 
 _write_lock = threading.Lock()
 _sequence_lock = threading.Lock()
@@ -19,9 +19,9 @@ _request_id_var: ContextVar[str | None] = ContextVar("trace_request_id", default
 
 
 def initialize() -> None:
-    if not TRACE_LOGGING_ENABLED:
+    if not config.TRACE_LOGGING_ENABLED:
         return
-    TRACE_LOG_DIR.mkdir(parents=True, exist_ok=True)
+    config.TRACE_LOG_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def set_session_id(session_id: str) -> None:
@@ -153,15 +153,15 @@ def log_tool_call_end(
 
 
 def cleanup_old_logs(now: datetime | None = None) -> int:
-    if not TRACE_LOGGING_ENABLED:
+    if not config.TRACE_LOGGING_ENABLED:
         return 0
 
     initialize()
     current_time = now or datetime.now(timezone.utc)
-    cutoff = current_time - timedelta(days=TRACE_LOG_RETENTION_DAYS)
+    cutoff = current_time - timedelta(days=config.TRACE_LOG_RETENTION_DAYS)
     deleted = 0
 
-    for path in TRACE_LOG_DIR.glob("trace-*.jsonl"):
+    for path in config.TRACE_LOG_DIR.glob("trace-*.jsonl"):
         try:
             modified = datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc)
             if modified < cutoff:
@@ -174,7 +174,7 @@ def cleanup_old_logs(now: datetime | None = None) -> int:
 
 
 def log_event(event_type: str, **payload: object) -> None:
-    if not TRACE_LOGGING_ENABLED:
+    if not config.TRACE_LOGGING_ENABLED:
         return
 
     initialize()
@@ -218,4 +218,4 @@ def _json_default(value: object) -> object:
 
 def _log_file_for_today() -> Path:
     day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    return TRACE_LOG_DIR / f"trace-{day}.jsonl"
+    return config.TRACE_LOG_DIR / f"trace-{day}.jsonl"

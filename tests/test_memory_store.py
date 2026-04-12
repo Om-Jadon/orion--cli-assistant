@@ -9,7 +9,6 @@ def conn(tmp_path, monkeypatch):
     test_db = tmp_path / ".orion" / "orion.memory.db"
     monkeypatch.setattr(config, "DB_PATH", test_db)
     from orion.memory import db
-    monkeypatch.setattr(db, "DB_PATH", test_db)
     c = db.get_connection()
     yield c
     c.close()

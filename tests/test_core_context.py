@@ -55,9 +55,11 @@ async def test_empty_db_returns_empty_string():
     from orion.core.context import build_context
 
     conn = make_conn()
-    result = await build_context(conn, "what is python?", session_id="s1")
-    assert result == ""
-    conn.close()
+    try:
+        result = await build_context(conn, "what is python?", session_id="s1")
+        assert result == ""
+    finally:
+        conn.close()
 
 
 @pytest.mark.asyncio
@@ -66,11 +68,13 @@ async def test_profile_included_in_context():
     from orion.memory.store import upsert_profile
 
     conn = make_conn()
-    upsert_profile(conn, "name", "Alice")
-    result = await build_context(conn, "what is python?", session_id="s1")
-    assert "USER PROFILE:" in result
-    assert "name: Alice" in result
-    conn.close()
+    try:
+        upsert_profile(conn, "name", "Alice")
+        result = await build_context(conn, "what is python?", session_id="s1")
+        assert "USER PROFILE:" in result
+        assert "name: Alice" in result
+    finally:
+        conn.close()
 
 
 @pytest.mark.asyncio
@@ -79,11 +83,13 @@ async def test_recent_turns_included():
     from orion.memory.store import save_turn
 
     conn = make_conn()
-    save_turn(conn, "s1", "user", "Hello there")
-    result = await build_context(conn, "what is python?", session_id="s1")
-    assert "RECENT CONVERSATION:" in result
-    assert "USER: Hello there" in result
-    conn.close()
+    try:
+        save_turn(conn, "s1", "user", "Hello there")
+        result = await build_context(conn, "what is python?", session_id="s1")
+        assert "RECENT CONVERSATION:" in result
+        assert "USER: Hello there" in result
+    finally:
+        conn.close()
 
 
 @pytest.mark.asyncio
@@ -91,11 +97,13 @@ async def test_retrieval_always_called():
     from orion.core.context import build_context
 
     conn = make_conn()
-    with patch("orion.core.context.hybrid_search", new=AsyncMock(return_value=[])) as mock_search:
-        result = await build_context(conn, "what is python?", session_id="s1")
-        mock_search.assert_called_once()
-    assert "RELEVANT MEMORY:" not in result
-    conn.close()
+    try:
+        with patch("orion.core.context.hybrid_search", new=AsyncMock(return_value=[])) as mock_search:
+            result = await build_context(conn, "what is python?", session_id="s1")
+            mock_search.assert_called_once()
+        assert "RELEVANT MEMORY:" not in result
+    finally:
+        conn.close()
 
 
 @pytest.mark.asyncio
@@ -103,9 +111,11 @@ async def test_retrieval_injected_when_results_exist():
     from orion.core.context import build_context
 
     conn = make_conn()
-    mock_results = [{"content": "We discussed Python yesterday", "source": "test"}]
-    with patch("orion.core.context.hybrid_search", new=AsyncMock(return_value=mock_results)):
-        result = await build_context(conn, "what is python?", session_id="s1")
-    assert "RELEVANT MEMORY:" in result
-    assert "We discussed Python yesterday" in result
-    conn.close()
+    try:
+        mock_results = [{"content": "We discussed Python yesterday", "source": "test"}]
+        with patch("orion.core.context.hybrid_search", new=AsyncMock(return_value=mock_results)):
+            result = await build_context(conn, "what is python?", session_id="s1")
+        assert "RELEVANT MEMORY:" in result
+        assert "We discussed Python yesterday" in result
+    finally:
+        conn.close()

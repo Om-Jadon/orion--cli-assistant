@@ -16,7 +16,7 @@ It supports cloud providers (OpenAI, Anthropic, Gemini, Groq, Mistral) through p
 - One-shot mode for direct commands.
 - Pipe mode for log and text analysis from stdin.
 - Slash commands for runtime control:
-  - /help, /think, /clear, /undo, /reset, /history, /memory, /scan, /exit
+  - /help, /clear, /undo, /reset, /history, /memory, /scan, /exit
 - Hybrid memory retrieval:
   - SQLite conversation/profile store
   - FTS5 keyword retrieval
@@ -50,7 +50,7 @@ The project follows a standard `src/` layout for clean packaging and namespace i
 - Tools:
   - `src/orion/tools/`: Files, shell, browser, search, and media tool modules.
 - UI:
-  - `src/orion/ui/`: Renderer, spinner, input handlers, and slash command routing.
+  - `src/orion/ui/`: Renderer, spinner, input handlers, slash command routing, and **onboarding**.
 
 For a deeper technical breakdown, see [project_overview.md](project_overview.md).
 
@@ -98,51 +98,64 @@ Alternatively, you can run directly through `uv`:
 uv run orion
 ```
 
+## Quality and Verification
+
+Orion maintains a high-quality bar with a 175+ test suite covering core logic, tools, and UI primitives.
+
+```bash
+uv run pytest
+```
+
 ## Running Orion
 
 Once installed, use the `orion` command:
 
 **Interactive mode:**
-
 ```bash
 orion
 ```
+*Note: On your first run, Orion will walk you through a themed, interactive setup flow to configure your AI provider and preferences.*
 
 **One-shot mode:**
-
 ```bash
+# Execute a single request and exit
 orion "summarize this repository"
 ```
 
 **Pipe mode:**
-
 ```bash
-cat build.log | orion "find root cause"
+# Analyze a stream of text from stdin
+cat server.log | orion "find the critical error and explain it"
+```
+
+## CLI Usage & Flags
+
+```text
+Usage:
+  orion [options] [prompt]
+
+Options:
+  -h, --help      Show this help message and exit
+  -v, --version   Show program version and exit
+
+Slash Commands (in Interactive Mode):
+  /help           Show session help
+  /clear          Clear the terminal screen
+  /undo           Revert the last exchanges
+  /reset          Clear current conversation context
+  /memory         View or clear profile facts
+  /scan [path]    Index folder metadata for retrieval
+  /history        List recent session IDs
+  /exit           Terminate the session
 ```
 
 ## Configuration
 
-Orion reads runtime configuration from `~/.orion/config.toml`. Use the following to initialize your environment:
+Orion stores state in `~/.orion/`. While the **Interactive Onboarding** flow is recommended, you can manually inspect or edit the generated `config.toml` in that directory.
 
-1. Create the directory: `mkdir -p ~/.orion`
-2. Create `config.toml`:
-
-```toml
-model_string = "openai:gpt-4o"  # or "anthropic:claude-3-5-sonnet-latest", etc.
-```
-
-3. Export your provider's API key:
-
-```bash
-export OPENAI_API_KEY=sk-...
-```
-
-For more options, see [config.py](src/orion/config.py).
-
-## Quality and Verification
-
-Orion maintains a high-quality bar with a 170+ test suite covering core logic, tools, and UI primitives.
-
-```bash
-uv run pytest
-```
+Supported Cloud Providers:
+- **Groq** (Recommended: Generous Free Tier & High Performance)
+- **OpenAI**
+- **Anthropic**
+- **Gemini** (Google)
+- **Mistral**

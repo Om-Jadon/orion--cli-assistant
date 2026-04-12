@@ -4,7 +4,7 @@ from typing import AsyncGenerator
 from pydantic_ai import Agent
 from orion.ui.renderer import console, stream_response
 from orion.ui.spinner import Spinner
-from orion.config import MODEL_STRING, PROVIDER
+from orion import config
 from orion.core import trace_logging as trace_logging
 from orion.core.model_fallback import get_groq_token_limit_fallback_models
 
@@ -75,7 +75,7 @@ async def _run_single_model(
             context=context,
             full_prompt=full_prompt,
             attempt=attempt_num,
-            provider=PROVIDER,
+            provider=config.PROVIDER,
             model=model_name,
         )
 
@@ -148,10 +148,9 @@ async def run_with_streaming(agent: Agent, prompt: str, context: str = "") -> st
     leaks literal tool-call syntax (e.g. <function/...>) into plain text output.
     """
     base_prompt = f"{context}\n\n{prompt}" if context else prompt
-    model_name = MODEL_STRING
-
+    model_name = config.MODEL_STRING
     try:
-        if PROVIDER != "groq":
+        if config.PROVIDER != "groq":
             response, _error, _token_limit, _ok = await _run_single_model(
                 agent=agent,
                 prompt=prompt,

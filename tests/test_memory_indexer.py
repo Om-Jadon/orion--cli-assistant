@@ -22,15 +22,14 @@ def conn(tmp_path):
         );
     """)
     db.commit()
-    return db
+    yield db
+    db.close()
 
 
 def _scan(conn, tmp_path, monkeypatch, verbose=False):
     """Patch config.HOME to tmp_path and call scan_home."""
     from orion import config
-    from orion.memory import indexer as indexer
     monkeypatch.setattr(config, "HOME", tmp_path)
-    monkeypatch.setattr(indexer, "HOME", tmp_path)
     from orion.memory.indexer import scan_home
     scan_home(conn, verbose=verbose)
 

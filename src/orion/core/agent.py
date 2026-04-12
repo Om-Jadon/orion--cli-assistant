@@ -4,7 +4,7 @@ import inspect
 import functools
 from pathlib import Path
 from pydantic_ai import Agent
-from orion.config import MODEL_STRING
+from orion import config
 from orion.core import trace_logging as trace_logging
 from orion.ui.spinner import update_label
 
@@ -13,10 +13,10 @@ def build_agent(model_string_override: str | None = None) -> Agent:
     """
     Build a cloud provider-backed PydanticAI agent.
 
-    MODEL_STRING is required by config; model_string_override is used for
+    selected_model_string is required; model_string_override is used for
     controlled model switching flows (for example Groq fallback attempts).
     """
-    selected_model_string = model_string_override or MODEL_STRING
+    selected_model_string = model_string_override or config.MODEL_STRING
     if not selected_model_string:
         raise ValueError("Cloud agent build requires a model string.")
     agent = Agent(

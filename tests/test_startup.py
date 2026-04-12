@@ -4,7 +4,7 @@ from unittest.mock import patch, MagicMock
 
 def test_check_db_false_when_missing(tmp_path):
     from orion.ui import startup
-    with patch.object(startup, 'DB_PATH', tmp_path / "missing.db"):
+    with patch("orion.config.DB_PATH", tmp_path / "missing.db"):
         assert startup._check_db() is False
 
 
@@ -12,20 +12,20 @@ def test_check_db_true_when_exists(tmp_path):
     from orion.ui import startup
     db = tmp_path / "orion.memory.db"
     db.touch()
-    with patch.object(startup, 'DB_PATH', db):
+    with patch("orion.config.DB_PATH", db):
         assert startup._check_db() is True
 
 
 def test_check_index_false_when_db_missing(tmp_path):
     from orion.ui import startup
-    with patch.object(startup, 'DB_PATH', tmp_path / "missing.db"):
+    with patch("orion.config.DB_PATH", tmp_path / "missing.db"):
         assert startup._check_index() is False
 
 
 def test_show_startup_does_not_raise():
     from orion.ui import startup as su
     console = MagicMock()
-    with patch.object(su, "PROVIDER", "openai"), \
+    with patch("orion.config.PROVIDER", "openai"), \
          patch.object(su, "_check_api_key", return_value=True), \
          patch.object(su, "_check_db", return_value=True), \
          patch.object(su, "_check_index", return_value=True), \
@@ -67,7 +67,7 @@ def test_tagline_in_show_startup():
     from orion.ui import startup as su
     buf = StringIO()
     con = Console(file=buf, highlight=False, width=120)
-    with _patch.object(su, "PROVIDER", "openai"), \
+    with _patch("orion.config.PROVIDER", "openai"), \
          _patch("orion.ui.startup._check_api_key", return_value=True), \
          _patch("orion.ui.startup._check_db", return_value=False), \
          _patch("orion.ui.startup._check_index", return_value=False):

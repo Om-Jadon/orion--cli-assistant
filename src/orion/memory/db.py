@@ -1,11 +1,11 @@
 import sqlite3
 import sqlite_vec
-from orion.config import DB_PATH, EMBED_DIM
+from orion import config
 
 
 def get_connection() -> sqlite3.Connection:
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+    config.DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(config.DB_PATH, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.enable_load_extension(True)
     sqlite_vec.load(conn)
@@ -58,7 +58,7 @@ def _run_migrations(conn: sqlite3.Connection):
         );
 
         CREATE VIRTUAL TABLE IF NOT EXISTS vec_memory USING vec0(
-            embedding float[{EMBED_DIM}]
+            embedding float[{config.EMBED_DIM}]
         );
 
         CREATE TABLE IF NOT EXISTS vec_meta (

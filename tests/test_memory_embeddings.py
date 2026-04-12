@@ -98,6 +98,6 @@ async def test_get_model_uses_config_embed_model():
             got = await embeddings_mod._get_model()
 
         assert got is fake_model
-        mock_text_embedding.assert_called_once_with(embeddings_mod.EMBED_MODEL)
+        mock_text_embedding.assert_called_once_with(embeddings_mod.config.EMBED_MODEL)
     finally:
         embeddings_mod._model = None

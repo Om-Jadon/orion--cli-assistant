@@ -1,7 +1,7 @@
 import sqlite3
 from orion.memory.store import get_recent_turns, get_user_profile
 from orion.memory.retrieval import hybrid_search
-from orion.config import CONTEXT_RECENT
+from orion import config
 
 
 async def build_context(conn: sqlite3.Connection, query: str, session_id: str) -> str:
@@ -14,7 +14,7 @@ async def build_context(conn: sqlite3.Connection, query: str, session_id: str) -
         parts.append(f"USER PROFILE:\n{profile_text}")
 
     # Tier 2: Recent turns (always)
-    recent = get_recent_turns(conn, session_id, max_tokens=CONTEXT_RECENT)
+    recent = get_recent_turns(conn, session_id, max_tokens=config.CONTEXT_RECENT)
     if recent:
         parts.append(f"RECENT CONVERSATION:\n{recent}")
 

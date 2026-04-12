@@ -2,6 +2,12 @@ import pytest
 from orion.core.model_fallback import get_groq_token_limit_fallback_models
 
 
+@pytest.fixture(autouse=True)
+def mock_default_provider(monkeypatch):
+    from orion import config
+    monkeypatch.setattr(config, "PROVIDER", "openai")
+
+
 class _FakeResult:
     def __init__(self, text: str):
         self._text = text
@@ -56,6 +62,7 @@ async def test_run_with_streaming_retries_on_textual_tool_call(monkeypatch):
             out += token
         return out
 
+    monkeypatch.setattr(cs.config, "PROVIDER", "openai")
     monkeypatch.setattr(cs, "stream_response", _capture)
     monkeypatch.setattr(cs, "spinner", _FakeSpinner())
     monkeypatch.setattr(cs.trace_logging, "start_llm_request", lambda **_: "req-1")
@@ -86,6 +93,7 @@ async def test_run_with_streaming_retries_on_failed_generation(monkeypatch):
             out += token
         return out
 
+    monkeypatch.setattr(cs.config, "PROVIDER", "openai")
     monkeypatch.setattr(cs, "stream_response", _capture)
     monkeypatch.setattr(cs, "spinner", _FakeSpinner())
     monkeypatch.setattr(cs.trace_logging, "start_llm_request", lambda **_: "req-1")
@@ -116,6 +124,7 @@ async def test_run_with_streaming_keeps_model_response_after_cancelled_tool(monk
             out += token
         return out
 
+    monkeypatch.setattr(cs.config, "PROVIDER", "openai")
     monkeypatch.setattr(cs, "stream_response", _capture)
     monkeypatch.setattr(cs, "spinner", _FakeSpinner())
     monkeypatch.setattr(cs.trace_logging, "start_llm_request", lambda **_: "req-1")
@@ -183,8 +192,8 @@ async def test_run_with_streaming_groq_falls_back_on_token_limit(monkeypatch):
             out += token
         return out
 
-    monkeypatch.setattr(cs, "PROVIDER", "groq")
-    monkeypatch.setattr(cs, "MODEL_STRING", "groq:openai/gpt-oss-120b")
+    monkeypatch.setattr(cs.config, "PROVIDER", "groq")
+    monkeypatch.setattr(cs.config, "MODEL_STRING", "groq:openai/gpt-oss-120b")
     monkeypatch.setattr(cs, "stream_response", _capture)
     monkeypatch.setattr(cs, "spinner", _FakeSpinner())
     monkeypatch.setattr(cs.trace_logging, "start_llm_request", lambda **kwargs: events.append(("request", kwargs)) or "req-1")
@@ -219,8 +228,8 @@ async def test_run_with_streaming_groq_does_not_fallback_on_non_token_errors(mon
             out += token
         return out
 
-    monkeypatch.setattr(cs, "PROVIDER", "groq")
-    monkeypatch.setattr(cs, "MODEL_STRING", "groq:openai/gpt-oss-120b")
+    monkeypatch.setattr(cs.config, "PROVIDER", "groq")
+    monkeypatch.setattr(cs.config, "MODEL_STRING", "groq:openai/gpt-oss-120b")
     monkeypatch.setattr(cs, "stream_response", _capture)
     monkeypatch.setattr(cs, "spinner", _FakeSpinner())
     monkeypatch.setattr(cs.trace_logging, "start_llm_request", lambda **kwargs: events.append(("request", kwargs)) or "req-1")
@@ -256,8 +265,8 @@ async def test_run_with_streaming_groq_reports_exhaustion_after_third_model(monk
             out += token
         return out
 
-    monkeypatch.setattr(cs, "PROVIDER", "groq")
-    monkeypatch.setattr(cs, "MODEL_STRING", "groq:openai/gpt-oss-120b")
+    monkeypatch.setattr(cs.config, "PROVIDER", "groq")
+    monkeypatch.setattr(cs.config, "MODEL_STRING", "groq:openai/gpt-oss-120b")
     monkeypatch.setattr(cs, "stream_response", _capture)
     monkeypatch.setattr(cs, "spinner", _FakeSpinner())
     monkeypatch.setattr(cs.trace_logging, "start_llm_request", lambda **kwargs: events.append(("request", kwargs)) or "req-1")

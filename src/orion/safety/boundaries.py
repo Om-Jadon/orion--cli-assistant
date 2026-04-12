@@ -1,6 +1,6 @@
 import shlex
 from pathlib import Path
-from orion.config import HOME
+from orion import config
 
 BLOCKED_COMMANDS = ["sudo", "su", "pkexec", "doas"]
 
@@ -12,7 +12,7 @@ DANGER_PATTERNS = [
 def validate_path(path: str) -> tuple[bool, str]:
     try:
         resolved = Path(path).expanduser().resolve()
-        resolved.relative_to(HOME)
+        resolved.relative_to(config.HOME)
         return True, str(resolved)
     except ValueError:
         return False, f"Blocked: '{path}' is outside your home directory."

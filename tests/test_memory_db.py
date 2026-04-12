@@ -10,9 +10,6 @@ def isolated_db(tmp_path, monkeypatch):
     from orion import config
     test_db = tmp_path / ".orion" / "orion.memory.db"
     monkeypatch.setattr(config, "DB_PATH", test_db)
-    # Also patch the reference inside memory.db module
-    from orion.memory import db
-    monkeypatch.setattr(db, "DB_PATH", test_db)
     yield test_db
 
 

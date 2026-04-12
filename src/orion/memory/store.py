@@ -1,7 +1,7 @@
 import json
 import sqlite3
 from math import ceil
-from orion.config import CONTEXT_RECENT
+from orion import config
 
 
 def save_turn(conn: sqlite3.Connection, session_id: str, role: str,
@@ -21,7 +21,9 @@ def delete_session_history(conn: sqlite3.Connection, session_id: str):
 
 
 def get_recent_turns(conn: sqlite3.Connection, session_id: str,
-                     max_tokens: int = CONTEXT_RECENT) -> str:
+                     max_tokens: int | None = None) -> str:
+    if max_tokens is None:
+        max_tokens = config.CONTEXT_RECENT
     rows = conn.execute(
         """SELECT role, content FROM conversations
            WHERE session_id = ?

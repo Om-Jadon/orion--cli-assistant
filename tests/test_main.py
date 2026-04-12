@@ -34,6 +34,7 @@ async def test_main_ctrl_c_exits_loop_gracefully():
          patch.object(main.sys.stdin, "isatty", return_value=True), \
          patch("orion.main.show_startup"), \
          patch("orion.main.build_session", return_value=MagicMock()), \
+         patch("orion.config.is_config_ready", return_value=True), \
          patch("orion.main.get_input", new=AsyncMock(side_effect=[KeyboardInterrupt()])) as mock_get_input, \
          patch("orion.main.asyncio.to_thread", new=AsyncMock(return_value=None)), \
          patch("orion.main.console.print") as mock_print:
@@ -117,14 +118,28 @@ def test_run_background_scan_closes_connection_on_error():
     fake_conn.close.assert_called_once()
 
 
+@pytest.mark.filterwarnings("ignore:Exception ignored in.*coroutine object main")
 def test_cli_entry_catches_keyboardinterrupt_and_closes_connection():
     fake_conn = MagicMock()
 
     def _raise_interrupt(coro):
+        # We must close the coroutine to avoid "coroutine was never awaited"
+        # and also ensure the event loop has a chance to settle if needed.
         coro.close()
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                pass # can't do much if it's already running
+        except RuntimeError:
+            pass
         raise KeyboardInterrupt()
 
+    async def mock_main():
+        pass
+
     with patch("orion.main.get_connection", return_value=fake_conn), \
+         patch("orion.config.is_config_ready", return_value=True), \
+         patch("orion.main.main", side_effect=mock_main), \
          patch("orion.main.asyncio.run", side_effect=_raise_interrupt), \
          patch("orion.main.console.print") as mock_print:
         main.cli_entry()

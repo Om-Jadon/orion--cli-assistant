@@ -41,35 +41,35 @@ async def test_hybrid_search_returns_results():
     from orion.memory.retrieval import hybrid_search
 
     conn = make_in_memory_conn()
+    try:
+        # Insert a row into vec_meta
+        conn.execute(
+            "INSERT INTO vec_meta (rowid, content, source) VALUES (1, 'the quick brown fox', 'test')"
+        )
 
-    # Insert a row into vec_meta
-    conn.execute(
-        "INSERT INTO vec_meta (rowid, content, source) VALUES (1, 'the quick brown fox', 'test')"
-    )
+        # Insert matching row into memory_fts
+        conn.execute(
+            "INSERT INTO memory_fts (rowid, content, key, source) VALUES (1, 'the quick brown fox', 'key1', 'test')"
+        )
 
-    # Insert matching row into memory_fts
-    conn.execute(
-        "INSERT INTO memory_fts (rowid, content, key, source) VALUES (1, 'the quick brown fox', 'key1', 'test')"
-    )
+        # Build a 384-dim vector and insert into vec_memory
+        test_vector = [0.1] * EMBED_DIM
+        serialized = serialize(test_vector)
+        conn.execute(
+            "INSERT INTO vec_memory (rowid, embedding) VALUES (1, ?)",
+            (sqlite3.Binary(serialized),)
+        )
+        conn.commit()
 
-    # Build a 384-dim vector and insert into vec_memory
-    test_vector = [0.1] * EMBED_DIM
-    serialized = serialize(test_vector)
-    conn.execute(
-        "INSERT INTO vec_memory (rowid, embedding) VALUES (1, ?)",
-        (sqlite3.Binary(serialized),)
-    )
-    conn.commit()
+        # Mock embed to return the same vector so semantic search matches
+        with patch("orion.memory.retrieval.embed", new=AsyncMock(return_value=test_vector)):
+            results = await hybrid_search(conn, "quick brown fox", k=5)
 
-    # Mock embed to return the same vector so semantic search matches
-    with patch("orion.memory.retrieval.embed", new=AsyncMock(return_value=test_vector)):
-        results = await hybrid_search(conn, "quick brown fox", k=5)
-
-    assert len(results) >= 1
-    assert results[0]["content"] == "the quick brown fox"
-    assert results[0]["source"] == "test"
-
-    conn.close()
+        assert len(results) >= 1
+        assert results[0]["content"] == "the quick brown fox"
+        assert results[0]["source"] == "test"
+    finally:
+        conn.close()
 
 
 @pytest.mark.asyncio

@@ -73,26 +73,27 @@ def test_toml_override_updates_public_constants(tmp_path):
         importlib.reload(cfg)
 
 
-def test_toml_missing_model_string_exits(tmp_path):
-    """When config.toml is absent, model_string requirement must hard-fail."""
+def test_toml_missing_model_string_proceeds_with_none(tmp_path):
+    """When config.toml is absent, it stays None (onboarding flow handles it)."""
     from orion import config as cfg
     try:
         with patch.object(cfg, "CONFIG_FILE", tmp_path / "nonexistent.toml"):
-            with pytest.raises(SystemExit):
-                importlib.reload(cfg)
+            importlib.reload(cfg)
+            assert cfg.MODEL_STRING is None
+            assert cfg.PROVIDER is None
     finally:
         importlib.reload(cfg)
 
 
-def test_model_string_absent_in_toml_exits(tmp_path):
-    """model_string key missing from orion.config.toml must hard-fail."""
+def test_model_string_absent_in_toml_is_none(tmp_path):
+    """model_string key missing from orion.config.toml results in None."""
     from orion import config as cfg
     toml_file = tmp_path / "config.toml"
     toml_file.write_text('theme = "mocha"\n')
     try:
         with patch.object(cfg, "CONFIG_FILE", toml_file):
-            with pytest.raises(SystemExit):
-                importlib.reload(cfg)
+            importlib.reload(cfg)
+            assert cfg.MODEL_STRING is None
     finally:
         importlib.reload(cfg)
 
@@ -128,14 +129,15 @@ def test_provider_detection_from_model_string(tmp_path):
     importlib.reload(cfg)
 
 
-def test_unknown_provider_prefix_exits(tmp_path):
+def test_unknown_provider_prefix_results_in_none(tmp_path):
     from orion import config as cfg
     toml_file = tmp_path / "invalid.toml"
     toml_file.write_text('model_string = "qwen3:4b"\n')
     try:
         with patch.object(cfg, "CONFIG_FILE", toml_file):
-            with pytest.raises(SystemExit):
-                importlib.reload(cfg)
+            importlib.reload(cfg)
+            assert cfg.MODEL_STRING == "qwen3:4b"
+            assert cfg.PROVIDER is None
     finally:
         importlib.reload(cfg)
 

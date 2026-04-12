@@ -4,7 +4,7 @@ from rich.markdown import Markdown
 from rich.live import Live
 from rich.rule import Rule
 from rich.panel import Panel
-from orion.config import MAX_WIDTH
+from orion import config
 
 MOCHA = Theme({
     "user":      "bold #CDD6F4",
@@ -23,8 +23,12 @@ MOCHA = Theme({
 console = Console(
     theme=MOCHA,
     highlight=False,
-    width=MAX_WIDTH
+    width=config.MAX_WIDTH
 )
+
+def refresh_console_settings():
+    """Update console settings from the current configuration."""
+    console.width = config.MAX_WIDTH
 
 def print_user(text: str):
     console.print(Rule(title="[#6C7086]you[/#6C7086]", align="left", style="#45475A"))
