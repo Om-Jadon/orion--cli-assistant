@@ -20,8 +20,29 @@ MOCHA = Theme({
     "muted":     "#45475A",
 })
 
+LATTE = Theme({
+    "user":      "bold #4C4F69",
+    "assistant": "#04A5E5",
+    "orion":     "#04A5E5",
+    "dim":       "#9CA0B0",
+    "thinking":  "italic #ACB0BE",
+    "success":   "#40A02B",
+    "warning":   "#DF8E1D",
+    "error":     "#D20F39",
+    "accent":    "#1E66F5",
+    "border":    "#DCE0E8",
+    "muted":     "#BCC0CC",
+})
+
+def get_theme(name: str) -> Theme:
+    if name.lower() == "latte":
+        return LATTE
+    if name.lower() == "none":
+        return Theme() # Default rich colors
+    return MOCHA
+
 console = Console(
-    theme=MOCHA,
+    theme=get_theme(config.THEME),
     highlight=False,
     width=config.MAX_WIDTH
 )
@@ -29,6 +50,8 @@ console = Console(
 def refresh_console_settings():
     """Update console settings from the current configuration."""
     console.width = config.MAX_WIDTH
+    # In Rich, themes are immutable after Console init, but we can push a new one
+    console.push_theme(get_theme(config.THEME))
 
 def print_user(text: str):
     console.print(Rule(title="[#6C7086]you[/#6C7086]", align="left", style="#45475A"))

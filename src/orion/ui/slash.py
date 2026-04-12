@@ -33,6 +33,7 @@ async def handle_slash(
         console.print("  [dim]/history[/dim]    show this session's conversation")
         console.print("  [dim]/reset[/dim]      clear current conversation context")
         console.print("  [dim]/memory[/dim]     show what orion knows about you")
+        console.print("  [dim]/config[/dim]     open configuration file in editor")
         console.print("  [dim]/scan[/dim]       re-index your home directory")
         console.print("  [dim]/exit[/dim]       quit orion")
         console.print()
@@ -59,6 +60,19 @@ async def handle_slash(
         show_memory(conn, console)
         return
 
+    if command == "/config":
+        from orion import config
+        import subprocess
+        console.print(f"[dim]Opening {config.CONFIG_FILE}...[/dim]")
+        console.print("[accent]Note: Restart Orion for changes to take effect.[/accent]")
+        try:
+            # xdg-open is standard on most Linux desktops.
+            # Using str() ensures Path object is converted for subprocess.
+            subprocess.run(["xdg-open", str(config.CONFIG_FILE)], check=True)
+        except Exception as exc:
+            console.print(f"[error]Could not open config file:[/error] {exc}")
+        return
+
     if command == "/scan":
         from orion.memory.indexer import scan_home
 
@@ -67,7 +81,7 @@ async def handle_slash(
         console.print("[success]File index updated.[/success]")
         return
 
-    if command in ("/exit", "/quit"):
+    if command == "/exit":
         raise SystemExit(0)
 
     console.print(f"[error]Unknown command:[/error] {cmd}. Type /help for available commands.")

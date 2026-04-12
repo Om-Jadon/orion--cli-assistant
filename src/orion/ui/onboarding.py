@@ -136,9 +136,7 @@ def run_onboarding() -> tuple[str | None, str | None, str | None, str | None, st
                     break
                 else:
                     console.print(f"    [{C_ERROR}]Error: {err_msg}[/{C_ERROR}]")
-                    if not Confirm.ask(f"    [{C_TEXT}]Try again?[/{C_TEXT}]", default=True):
-                        # Use a sentinel to indicate cancellation if they refuse to retry
-                        return None, None, None, None, None
+                    console.print(f"    [{C_WARN}]Please re-enter your key to continue.[/{C_WARN}]")
 
         # 4. Preferences
         console.print()
@@ -153,7 +151,7 @@ def run_onboarding() -> tuple[str | None, str | None, str | None, str | None, st
         _print_step(5, total_steps, "Memory")
         scan_dir = None
         if Confirm.ask(f"    [{C_TEXT}]Scan current directory now to build knowledge index?[/{C_TEXT}]", default=True):
-            default_dir = os.getcwd()
+            default_dir = os.path.expanduser("~")
             path_str = Prompt.ask(f"    [{C_TEXT}]Path to index[/{C_TEXT}]", default=default_dir)
             scan_dir = os.path.expanduser(path_str)
 

@@ -23,6 +23,7 @@ def setup_runtime():
     config.ORION_DIR.mkdir(parents=True, exist_ok=True)
     logging.basicConfig(level=logging.DEBUG, filename=str(config.ORION_DIR / "debug.log"))
     trace_logging.initialize()
+    refresh_console_settings()
 
     global state, conn
     state = slash.RuntimeState(
@@ -76,6 +77,21 @@ Configuration:
             print(f"Orion CLI v{config.__version__}")
             sys.exit(0)
 
+    def _fail_init(msg: str, detail: str):
+        from rich.panel import Panel
+        from rich.text import Text
+        error_panel = Panel(
+            Text.from_markup(f"[bold #F38BA8]Configuration Error:[/] [bold #CDD6F4]{msg}[/]\n\n[#6C7086]{detail}[/]"),
+            border_style="#F38BA8",
+            padding=(1, 2),
+            title="[bold #F38BA8]Initialization Failed[/]",
+            title_align="left"
+        )
+        console.print()
+        console.print(error_panel)
+        console.print()
+        sys.exit(1)
+
     # 2. First-run Onboarding Check
     if not config.is_config_ready():
         from orion.ui.onboarding import run_onboarding
@@ -106,7 +122,12 @@ Configuration:
             os.environ[env_var] = api_key
 
         # 2. Early setup for profile/indexing
-        setup_runtime()
+        try:
+            setup_runtime()
+        except ValueError as e:
+            _fail_init("Invalid backbone configuration.", str(e))
+        except Exception as e:
+            _fail_init("System initialization failed.", str(e))
         
         from orion.memory.store import upsert_profile
         if name:
@@ -120,7 +141,19 @@ Configuration:
                 scan_directory(conn, scan_dir)
     else:
         # Normal startup
-        setup_runtime()
+        # Ensure the environment has the key for the configured provider
+        provider = config.PROVIDER
+        env_var = config.CLOUD_API_KEY_VARS.get(provider)
+        if env_var and config.API_KEY:
+            import os
+            os.environ[env_var] = config.API_KEY
+
+        try:
+            setup_runtime()
+        except ValueError as e:
+            _fail_init("Invalid backbone configuration.", str(e))
+        except Exception as e:
+            _fail_init("System initialization failed.", str(e))
 
     try:
         asyncio.run(main())

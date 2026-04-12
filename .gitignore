@@ -11,9 +11,8 @@ dist/
 .claude/
 .agents/
 .github/
+scratch/
 
 ideas.md
-docs/
-docs/*
 CLAUDE.md
 .impeccable.md

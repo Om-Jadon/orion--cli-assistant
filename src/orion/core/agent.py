@@ -48,6 +48,7 @@ ENVIRONMENT:
 - Current directory: {cwd}
 - Shell: {shell}
 - Home: {home}
+- Config: {config.CONFIG_FILE}
 - OS: Linux
 
 SLASH COMMANDS:

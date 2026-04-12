@@ -25,10 +25,8 @@ def is_config_ready() -> bool:
         with open(CONFIG_FILE, "rb") as f:
             data = tomllib.load(f)
         # Check for absolutely required fields
-        if not data.get("model_string"):
+        if not data.get("model_string") or not data.get("api_key"):
             return False
-        # api_key can be in config or in env; but is_config_ready usually means "set up"
-        # We'll stick to model_string as the main 'readiness' indicator for onboarding
         return True
     except Exception:
         return False
@@ -39,10 +37,34 @@ def save_config(model_string: str, api_key: str) -> bool:
     try:
         ORION_DIR.mkdir(parents=True, exist_ok=True)
         # We use json.dumps for safe TOML string quoting/escaping
-        config_content = f"""# Orion CLI Configuration
-# Auto-generated during initial onboarding.
+        config_content = f"""# ==============================================================================
+# 🌌 ORION CONFIGURATION
+# ==============================================================================
+# Auto-generated during setup. You can manually edit these settings.
+# Changes will take effect the next time you start Orion.
+
+# 🧠 INTELLIGENCE
+# Supported Providers: groq, openai, anthropic, gemini, mistral
+# Format: "provider:model" (e.g. "anthropic:claude-3-5-sonnet-latest")
 model_string = {json.dumps(model_string)}
 api_key = {json.dumps(api_key)}
+
+# 🎨 APPEARANCE
+# Themes: "mocha" (default), "latte" (light), or "none" (system)
+theme = "mocha"
+
+# Maximum width of the rendered output in the terminal
+max_width = 100
+
+# 🛠️ DIAGNOSTICS & PRIVACY
+# Enable/disable detailed streaming trace logs in ~/.orion/logs/
+trace_logging_enabled = true
+
+# How many days to keep trace logs before auto-cleaning
+trace_log_retention_days = 7
+
+# Optional: Uncomment to move trace logs to a different directory.
+# trace_log_dir = "~/custom/log/path"
 """
         CONFIG_FILE.write_text(config_content, encoding="utf-8")
         os.chmod(CONFIG_FILE, 0o600)
@@ -77,6 +99,16 @@ def _as_bool(value, default: bool) -> bool:
         return bool(value)
     return default
 
+def _as_int(value, default: int) -> int:
+    try:
+        if isinstance(value, (int, float)):
+            return int(value)
+        if isinstance(value, str):
+            return int(value.strip())
+        return default
+    except (ValueError, TypeError):
+        return default
+
 def _load_user_config() -> dict:
     if CONFIG_FILE.exists():
         try:
@@ -91,13 +123,13 @@ def _load_user_config() -> dict:
 _user = _load_user_config()
 
 THEME     = _user.get("theme",     _defaults["theme"])
-MAX_WIDTH = int(_user.get("max_width", _defaults["max_width"]))
+MAX_WIDTH = _as_int(_user.get("max_width"), _defaults["max_width"])
 
 TRACE_LOGGING_ENABLED = _as_bool(
     _user.get("trace_logging_enabled", _defaults["trace_logging_enabled"]),
     _defaults["trace_logging_enabled"],
 )
-TRACE_LOG_RETENTION_DAYS = max(1, int(_user.get("trace_log_retention_days", _defaults["trace_log_retention_days"])))
+TRACE_LOG_RETENTION_DAYS = max(1, _as_int(_user.get("trace_log_retention_days"), _defaults["trace_log_retention_days"]))
 
 _trace_log_dir_raw = _user.get("trace_log_dir")
 if _trace_log_dir_raw:
@@ -115,6 +147,7 @@ def _get_model_string(value: object) -> str | None:
 
 
 MODEL_STRING: str | None = _get_model_string(_user.get("model_string"))
+API_KEY:      str | None = _user.get("api_key")
 
 CLOUD_API_KEY_VARS: dict[str, str] = {
     "openai":    "OPENAI_API_KEY",
