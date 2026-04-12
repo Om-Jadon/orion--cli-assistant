@@ -3,8 +3,12 @@ from dataclasses import dataclass
 from pathlib import Path
 import shutil as _shutil
 from typing import Any
+from rich.panel import Panel
+from rich import box
+from rich.table import Table
 
-from orion.memory.store import pop_last_operation, get_recent_turns, get_user_profile
+from orion.memory.store import pop_last_operation, get_recent_turns_list, get_user_profile
+from orion.ui.renderer import print_system_error, print_system_info, print_system_warning
 
 
 @dataclass
@@ -24,19 +28,36 @@ async def handle_slash(
     command = parts[0].lower() if parts else ""
 
     if command == "/help":
+        grid = Table.grid(padding=(0, 2))
+        grid.add_column(style="dim")
+        grid.add_column()
+        
+        commands = [
+            ("/help",    "show this message"),
+            ("/clear",   "clear the terminal"),
+            ("/undo",    "undo last file operation"),
+            ("/history", "show this session's conversation"),
+            ("/reset",   "clear current conversation context"),
+            ("/memory",  "show what orion knows about you"),
+            ("/config",  "open configuration file in editor"),
+            ("/scan",    "re-index your home directory"),
+            ("/exit",    "quit orion"),
+        ]
+        
+        for cmd_name, desc in commands:
+            grid.add_row(cmd_name, desc)
+
+        help_panel = Panel(
+            grid,
+            title="[#cba6f7]✦ slash commands[/#cba6f7]",
+            title_align="left",
+            border_style="#89B4FA",
+            box=box.ROUNDED,
+            padding=(0, 2),
+            expand=False
+        )
         console.print()
-        console.print("  [accent]Slash commands[/accent]")
-        console.print()
-        console.print("  [dim]/help[/dim]       show this message")
-        console.print("  [dim]/clear[/dim]      clear the terminal")
-        console.print("  [dim]/undo[/dim]       undo last file operation")
-        console.print("  [dim]/history[/dim]    show this session's conversation")
-        console.print("  [dim]/reset[/dim]      clear current conversation context")
-        console.print("  [dim]/memory[/dim]     show what orion knows about you")
-        console.print("  [dim]/config[/dim]     open configuration file in editor")
-        console.print("  [dim]/scan[/dim]       re-index your home directory")
-        console.print("  [dim]/exit[/dim]       quit orion")
-        console.print()
+        console.print(help_panel)
         return
 
     if command == "/clear":
@@ -53,7 +74,7 @@ async def handle_slash(
     if command == "/reset":
         from orion.memory.store import delete_session_history
         delete_session_history(conn, state.session_id)
-        console.print("[success]Conversation context cleared.[/success]")
+        console.print(Panel("[success]Conversation context cleared.[/success]", border_style="success", box=box.ROUNDED, padding=(0, 1), expand=False))
         return
 
     if command == "/memory":
@@ -63,8 +84,7 @@ async def handle_slash(
     if command == "/config":
         from orion import config
         import subprocess
-        console.print(f"[dim]Opening {config.CONFIG_FILE}...[/dim]")
-        console.print("[accent]Note: Restart Orion for changes to take effect.[/accent]")
+        print_system_info(f"Opening [bold]{config.CONFIG_FILE}[/bold] in your editor...\n[#89B4FA]Note: Restart Orion for changes to take effect.[/#89B4FA]")
         try:
             # xdg-open is standard on most Linux desktops.
             # Using str() ensures Path object is converted for subprocess.
@@ -76,15 +96,15 @@ async def handle_slash(
     if command == "/scan":
         from orion.memory.indexer import scan_home
 
-        console.print("[dim]Scanning file system...[/dim]")
+        console.print(Panel("[dim]Scanning file system...[/dim]", border_style="dim", box=box.ROUNDED, padding=(0, 1), expand=False))
         await asyncio.to_thread(scan_home, conn, False)
-        console.print("[success]File index updated.[/success]")
+        console.print(Panel("[success]File index updated.[/success]", border_style="success", box=box.ROUNDED, padding=(0, 1), expand=False))
         return
 
     if command == "/exit":
         raise SystemExit(0)
 
-    console.print(f"[error]Unknown command:[/error] {cmd}. Type /help for available commands.")
+    print_system_error(f"Unknown command: {cmd}. Type /help for available commands.")
 
 
 async def undo_last_operation(conn, console) -> str | None:
@@ -107,10 +127,10 @@ async def undo_last_operation(conn, console) -> str | None:
         try:
             _shutil.move(destination, source)
             msg = f"Undone: moved {Path(destination).name} back to {source}"
-            console.print(f"[success]{msg}[/success]")
+            console.print(Panel(f"[success]{msg}[/success]", border_style="success", box=box.ROUNDED, padding=(0, 1), expand=False))
             return msg
         except (OSError, _shutil.Error) as exc:
-            console.print(f"[error]Undo failed:[/error] {exc}")
+            console.print(Panel(f"[error]Undo failed:[/error] {exc}", border_style="error", box=box.ROUNDED, padding=(0, 1), expand=False))
         return
 
     if operation == "delete":
@@ -179,21 +199,75 @@ async def undo_last_operation(conn, console) -> str | None:
             console.print(f"[error]Undo failed:[/error] {exc}")
         return
 
-    console.print(f"[dim]Undo not supported for operation: {operation}[/dim]")
+    print_system_info(f"Undo not supported for operation: {operation}")
 
 
 def show_history(conn, session_id: str, console):
-    history = get_recent_turns(conn, session_id, max_tokens=4000)
-    if history:
-        console.print(history)
+    from orion.ui.renderer import highlight_paths
+    from rich.markdown import Markdown
+    from rich.text import Text
+    from rich.console import Group
+    
+    turns = get_recent_turns_list(conn, session_id, max_tokens=4000)
+    if turns:
+        elements = []
+        for i, turn in enumerate(turns):
+            role = turn["role"].lower()
+            text = turn["content"]
+            
+            header = Text()
+            if role == "user":
+                header.append("User: ", style="cyan")
+            elif role == "assistant":
+                header.append("✦ ", style="#cba6f7")
+                header.append("Orion: ", style="bold #cba6f7")
+            else:
+                header.append(f"{role.title()}: ", style="dim")
+            
+            elements.append(header)
+            # Render Markdown for the content to restore bold/italic/link support
+            elements.append(Markdown(highlight_paths(text)))
+            
+            if i < len(turns) - 1:
+                elements.append(Text("")) # Vertical spacer between turns
+
+        history_panel = Panel(
+            Group(*elements),
+            title="[#cba6f7]✦ session history[/#cba6f7]",
+            title_align="left",
+            border_style="#45475a", # Surface1 (subtle)
+            box=box.ROUNDED,
+            padding=(0, 2),
+            expand=False
+        )
+        console.print()
+        console.print(history_panel)
     else:
-        console.print("[dim]No history yet.[/dim]")
+        console.print(Panel("[dim]No history yet.[/dim]", border_style="dim", box=box.ROUNDED, padding=(0, 1), expand=False))
 
 
 def show_memory(conn, console):
     profile = get_user_profile(conn)
     if profile:
+        table = Table.grid(padding=(0, 2))
+        table.add_column(style="bold #89B4FA")
+        table.add_column(style="dim")
+        
         for key, value in profile.items():
-            console.print(f"  [accent]{key}[/accent]  [dim]{value}[/dim]")
+            # Clean up keys for display
+            display_key = key.replace("_", " ").title()
+            table.add_row(display_key, value)
+            
+        memory_panel = Panel(
+            table,
+            title="[#cba6f7]✦ orion's memory[/#cba6f7]",
+            title_align="left",
+            border_style="#89B4FA",
+            box=box.ROUNDED,
+            padding=(0, 2),
+            expand=False
+        )
+        console.print()
+        console.print(memory_panel)
     else:
-        console.print("[dim]Nothing stored yet.[/dim]")
+        console.print(Panel("[dim]Nothing stored yet.[/dim]", border_style="dim", box=box.ROUNDED, padding=(0, 1), expand=False))

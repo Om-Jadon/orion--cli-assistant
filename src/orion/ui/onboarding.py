@@ -7,6 +7,7 @@ from rich.table import Table
 from rich import box
 from rich.text import Text
 from rich.align import Align
+from orion import config
 from orion.core.model_fallback import get_recommended_model
 
 console = Console()
@@ -18,6 +19,7 @@ C_WARN    = "#F9E2AF"  # Yellow
 C_ERROR   = "#F38BA8"  # Red
 C_DIM     = "#6C7086"  # Overlay0
 C_TEXT    = "#CDD6F4"  # Text
+from orion.ui.renderer import print_system_error, print_system_success, print_system_warning
 
 def _print_step(step: int, total: int, title: str):
     """Prints a consistent, stylized phase header."""
@@ -74,9 +76,9 @@ def run_onboarding() -> tuple[str | None, str | None, str | None, str | None, st
         welcome_msg = Text.from_markup(f"Welcome to [bold {C_PRIMARY}]Orion[/bold {C_PRIMARY}]")
         console.print(Align.center(Panel(
             welcome_msg,
-            subtitle=f"[{C_DIM}]v0.2.0[/{C_DIM}]",
-            box=box.HEAVY,
-            border_style=C_DIM,
+            subtitle=f"[{C_DIM}]v{config.__version__}[/{C_DIM}]",
+            box=box.ROUNDED,
+            border_style="#cba6f7",
             padding=(1, 6)
         )))
         
@@ -125,7 +127,7 @@ def run_onboarding() -> tuple[str | None, str | None, str | None, str | None, st
         while True:
             api_key = Prompt.ask(f"    [{C_TEXT}]Enter {provider.title()} API Key[/{C_TEXT}]")
             if not api_key:
-                console.print(f"    [{C_ERROR}]Key cannot be empty.[/{C_ERROR}]")
+                print_system_error("Key cannot be empty.")
                 continue
 
             with console.status(f"    [{C_WARN}]Verifying {provider.title()} connection...[/{C_WARN}]"):
@@ -135,7 +137,7 @@ def run_onboarding() -> tuple[str | None, str | None, str | None, str | None, st
                     console.print(f"    [{C_SUCCESS}]Connection successful![/{C_SUCCESS}]")
                     break
                 else:
-                    console.print(f"    [{C_ERROR}]Error: {err_msg}[/{C_ERROR}]")
+                    print_system_error(err_msg)
                     console.print(f"    [{C_WARN}]Please re-enter your key to continue.[/{C_WARN}]")
 
         # 4. Preferences
@@ -168,8 +170,8 @@ def run_onboarding() -> tuple[str | None, str | None, str | None, str | None, st
         console.print(Align.center(Panel(
             summary,
             title=f"[{C_SUCCESS}]Configuration Summary[/{C_SUCCESS}]",
-            box=box.HEAVY,
-            border_style=C_PRIMARY,
+            box=box.ROUNDED,
+            border_style="#cba6f7",
             padding=(1, 4)
         )))
         

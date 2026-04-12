@@ -53,8 +53,11 @@ api_key = {json.dumps(api_key)}
 # Themes: "mocha" (default), "latte" (light), or "none" (system)
 theme = "mocha"
 
-# Maximum width of the rendered output in the terminal
-max_width = 100
+# Maximum width of the rendered output (null/None for full terminal width)
+max_width = 150
+
+# Your identity (used in UI prompts)
+user_name = {json.dumps(os.environ.get("USER", "You"))}
 
 # 🛠️ DIAGNOSTICS & PRIVACY
 # Enable/disable detailed streaming trace logs in ~/.orion/logs/
@@ -79,7 +82,7 @@ def reload_config():
 
 _defaults = {
     "theme": "mocha",
-    "max_width": 100,
+    "max_width": None,
     "trace_logging_enabled": True,
     "trace_log_retention_days": 7,
 }
@@ -123,7 +126,11 @@ def _load_user_config() -> dict:
 _user = _load_user_config()
 
 THEME     = _user.get("theme",     _defaults["theme"])
-MAX_WIDTH = _as_int(_user.get("max_width"), _defaults["max_width"])
+MAX_WIDTH = _user.get("max_width", _defaults["max_width"])
+if isinstance(MAX_WIDTH, str) and MAX_WIDTH.lower() in ("none", "null", "undefined"):
+    MAX_WIDTH = None
+else:
+    MAX_WIDTH = _as_int(MAX_WIDTH, _defaults["max_width"])
 
 TRACE_LOGGING_ENABLED = _as_bool(
     _user.get("trace_logging_enabled", _defaults["trace_logging_enabled"]),
@@ -137,6 +144,8 @@ if _trace_log_dir_raw:
     TRACE_LOG_DIR = _trace_log_dir if _trace_log_dir.is_absolute() else ORION_DIR / _trace_log_dir
 else:
     TRACE_LOG_DIR = ORION_DIR / "logs"
+
+USER_NAME = _user.get("user_name", os.environ.get("USER", "You"))
 
 # --- Cloud provider support ---
 

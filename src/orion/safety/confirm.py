@@ -2,6 +2,8 @@ from dataclasses import dataclass
 from typing import Literal
 
 from prompt_toolkit import PromptSession
+from rich.panel import Panel
+from rich import box
 
 DESTRUCTIVE_KEYWORDS = [
     "delete", "remove", "trash", "wipe", "clear",
@@ -66,16 +68,31 @@ def requires_confirmation(action: str) -> bool:
 
 
 async def ask_confirmation(description: str) -> bool:
-    from orion.ui.renderer import console
+    from orion.ui.renderer import console, pause_live, resume_live
     from orion.ui.spinner import stop_active_spinner
 
     await stop_active_spinner()
+    pause_live()
 
-    console.print()
-    console.print(f"[warning]⚠  {description}[/warning]")
-    console.print("[dim]Type Y/Yes to confirm, anything else to cancel[/dim]")
-    answer = await _SESSION.prompt_async("  ❯ ")
-    return answer.strip().lower() in ("y", "yes")
+    try:
+        # Eliminate emojis entirely as they frequently cause width-calculation artifacts in many Linux terminals
+        panel_body = f"[bold red]! ACTION REQUIRED[/bold red]\n\n{description}\n\n[dim]Type Y/Yes to confirm, anything else to cancel[/dim]"
+        warning_panel = Panel(
+            panel_body,
+            title="[bold red]Safety Check[/bold red]",
+            title_align="left",
+            border_style="bold red",
+            box=box.HEAVY,
+            expand=True
+        )
+
+        console.print()
+        console.print(warning_panel)
+        from prompt_toolkit.formatted_text import HTML
+        answer = await _SESSION.prompt_async(HTML("   <ansired><b>❯</b></ansired> "))
+        return answer.strip().lower() in ("y", "yes")
+    finally:
+        resume_live()
 
 
 async def ask_command_confirmation(command: str) -> ConfirmationResult:

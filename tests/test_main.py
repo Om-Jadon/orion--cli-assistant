@@ -1,9 +1,22 @@
 import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
+from io import StringIO
+from rich.console import Console
 
 import pytest
 
 from orion import main
+
+def _to_str(renderable) -> str:
+    """Helper to convert a rich renderable to a plain string for testing."""
+    if isinstance(renderable, str):
+        return renderable
+    from orion.ui.renderer import get_theme
+    from orion import config
+    s = StringIO()
+    c = Console(file=s, force_terminal=False, width=100, theme=get_theme(config.THEME))
+    c.print(renderable)
+    return s.getvalue()
 
 
 @pytest.mark.asyncio
@@ -41,7 +54,7 @@ async def test_main_ctrl_c_exits_loop_gracefully():
         await main.main()
 
     mock_get_input.assert_awaited_once()
-    assert any("Interrupted." in str(call.args[0]) for call in mock_print.call_args_list if call.args)
+    assert any("interrupted" in _to_str(call.args[0]).lower() for call in mock_print.call_args_list if call.args)
 
 
 @pytest.mark.asyncio
@@ -145,4 +158,4 @@ def test_cli_entry_catches_keyboardinterrupt_and_closes_connection():
         main.cli_entry()
 
     fake_conn.close.assert_called_once()
-    assert any("Interrupted." in str(call.args[0]) for call in mock_print.call_args_list if call.args)
+    assert any("interrupted" in _to_str(call.args[0]).lower() for call in mock_print.call_args_list if call.args)

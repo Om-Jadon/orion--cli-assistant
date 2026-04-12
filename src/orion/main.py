@@ -2,8 +2,13 @@ import asyncio
 import logging
 import sys
 import uuid
+from rich.panel import Panel
+from rich import box
 from time import perf_counter
-from orion.ui.renderer import console, print_user, print_separator, refresh_console_settings
+from orion.ui.renderer import (
+    console, print_user, print_separator, refresh_console_settings,
+    print_system_error, print_system_success, print_system_warning, print_system_info
+)
 from orion.ui.input import build_session, get_input
 from orion.ui.startup import show_startup
 from orion.ui import slash
@@ -99,15 +104,15 @@ Configuration:
 
         if api_key is None:
             # Result of KeyboardInterrupt or cancellation
-            console.print("\n  [#6C7086]onboarding cancelled.[/#6C7086]\n")
+            console.print(Panel("[dim]onboarding cancelled.[/dim]", border_style="dim", box=box.ROUNDED, padding=(0, 1)))
             sys.exit(0)
 
         if not api_key:
-            console.print("\n  [#F38BA8]Error: API key is required to use Orion.[/#F38BA8]")
+            print_system_error("API key is required to use Orion.")
             sys.exit(1)
 
         if not config.save_config(model_string, api_key):
-            console.print("[#F38BA8]Error: Could not save configuration to ~/.orion/config.toml[/#F38BA8]")
+            print_system_error("Could not save configuration to ~/.orion/config.toml")
             sys.exit(1)
 
         # Reload configuration constants after saving
@@ -158,7 +163,7 @@ Configuration:
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        console.print("\n[#6C7086]Interrupted.[/#6C7086]")
+        print_system_info("Session Interrupted.")
     finally:
         if conn:
             conn.close()
@@ -277,7 +282,7 @@ async def main():
             await run_once(stripped, mode="interactive")
 
         except KeyboardInterrupt:
-            console.print("\n[#6C7086]Interrupted.[/#6C7086]")
+            print_system_info("Interrupted.")
             break
         except EOFError:
             break

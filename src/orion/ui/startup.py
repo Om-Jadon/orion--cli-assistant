@@ -2,14 +2,13 @@ import os
 import sys
 import subprocess
 from rich.console import Console
-from rich.rule import Rule
 from rich.text import Text
+from rich.table import Table
+from rich.panel import Panel
+from rich import box
 from orion import config
 
-
-_STATUS_NAME_WIDTH = 10  # column width for status label alignment
 console = Console()
-
 
 def ensure_browser_engine(console_obj: Console = console):
     """Checks for Playwright binaries and installs them if missing."""
@@ -24,35 +23,25 @@ def ensure_browser_engine(console_obj: Console = console):
                     stderr=subprocess.DEVNULL
                 )
             except Exception:
-                # Silently fail, tools will handle it if browser is actually missing later
                 pass
-
 
 def show_startup(console: Console, model: str):
     ensure_browser_engine(console)
     console.clear()
 
-    line1 = Text()
-    line1.append("  ◆", style="#89B4FA bold")
-    line1.append("  ")
-    line1.append("orion", style="#CDD6F4 bold")
-
-    line2 = Text()
-    line2.append(f"     {model}", style="#6C7086")
-
-    console.print()
-    console.print()
-    console.print(line1)
-    console.print(line2)
-    console.print()
-    console.print("  [#6C7086]quick · fluent · native[/#6C7086]")
-    console.print()
-    console.print(Rule(style="#45475A"))
-    console.print()
-
+    # 1. Branding
+    brand = Text()
+    brand.append("✦ orion", style="#cba6f7 bold")  # Mauve
+    
+    # 2. Status Grid
     api_ok = _check_api_key(config.PROVIDER)
     db_ok = _check_db()
     index_ok = _check_index()
+    
+    grid = Table.grid(padding=(0, 2))
+    grid.add_column(style="dim #6C7086")  # Label
+    grid.add_column(style="bold #585B70") # Value
+
     checks = [
         (config.PROVIDER, api_ok,   "ready" if api_ok else "missing"),
         ("memory", db_ok,    "active" if db_ok else "run /scan"),
@@ -61,24 +50,38 @@ def show_startup(console: Console, model: str):
 
     for name, ok, status_text in checks:
         dot = "[#A6E3A1]●[/#A6E3A1]" if ok else "[#F38BA8]●[/#F38BA8]"
-        console.print(f"  {dot} [#6C7086]{name:<{_STATUS_NAME_WIDTH}}[/#6C7086] [#585B70]{status_text}[/#585B70]")
+        grid.add_row(f"{dot} {name}", status_text)
+
+    # 3. Assemble Startup Panel
+    header = Text.from_markup(f"[{config.THEME}]v{config.__version__} · {model}[/]")
+    
+    startup_content = Table.grid(padding=(1, 0))
+    startup_content.add_row(Text("quick · fluent · native", style="#6C7086 italic"))
+    startup_content.add_row(grid)
+
+    startup_panel = Panel(
+        startup_content,
+        title=brand,
+        subtitle=header,
+        subtitle_align="left",
+        border_style="#45475A", # Surface1
+        box=box.ROUNDED,
+        padding=(0, 2),
+        expand=False
+    )
 
     console.print()
+    console.print(startup_panel)
     console.print()
 
 
 def _check_api_key(provider: str) -> bool:
-    """
-    Check that the required API key env var is set for the given cloud provider.
-    Prints a clear error to stderr and exits with code 1 if the key is missing.
-    Returns True when the key is present (used as the startup check result).
-    """
     env_var = config.CLOUD_API_KEY_VARS.get(provider, "")
     if not env_var:
-        return True  # unknown provider — let PydanticAI surface the error at inference time
+        return True
     if os.environ.get(env_var):
         return True
-    from rich.panel import Panel
+    
     error_msg = Text.from_markup(
         f"[bold #F38BA8]Error:[/] [bold #CDD6F4]{env_var}[/] is not set.\n\n"
         f"Export it in your shell before starting orion:\n\n"
@@ -90,15 +93,14 @@ def _check_api_key(provider: str) -> bool:
         border_style="#F38BA8",
         padding=(1, 2),
         title="[bold #F38BA8]Missing Authentication[/]",
-        title_align="left"
+        title_align="left",
+        box=box.ROUNDED
     ))
     console.print()
     sys.exit(1)
 
-
 def _check_db() -> bool:
     return config.DB_PATH.exists()
-
 
 def _check_index() -> bool:
     if not config.DB_PATH.exists():
@@ -110,7 +112,6 @@ def _check_index() -> bool:
             return count > 0
     except Exception:
         return False
-
 
 def _index_count() -> int:
     if not config.DB_PATH.exists():

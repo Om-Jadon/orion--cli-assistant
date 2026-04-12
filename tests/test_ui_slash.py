@@ -1,6 +1,20 @@
 import pytest
 from unittest.mock import patch, MagicMock, AsyncMock
 from orion import main
+from rich.console import Console
+from io import StringIO
+
+
+def _to_str(renderable) -> str:
+    """Helper to convert a rich renderable to a plain string for testing."""
+    if isinstance(renderable, str):
+        return renderable
+    from orion.ui.renderer import get_theme
+    from orion import config
+    s = StringIO()
+    c = Console(file=s, force_terminal=False, width=100, theme=get_theme(config.THEME))
+    c.print(renderable)
+    return s.getvalue()
 
 
 def test_main_uses_shared_runtime_state():
@@ -28,20 +42,25 @@ async def test_help_prints_output():
     with patch("orion.main.console") as mock_console:
         mock_console.print = lambda *a, **kw: printed.append(a[0] if a else "")
         await main.handle_slash("/help")
-    assert any("/clear" in str(line) for line in printed)
-    assert any("/undo" in str(line) for line in printed)
-    assert any("/history" in str(line) for line in printed)
-    assert any("/memory" in str(line) for line in printed)
-    assert any("/scan" in str(line) for line in printed)
+    
+    all_text = " ".join(_to_str(line) for line in printed)
+    assert "/clear" in all_text
+    assert "/undo" in all_text
+    assert "/history" in all_text
+    assert "/memory" in all_text
+    assert "/scan" in all_text
 
 
 @pytest.mark.asyncio
 async def test_unknown_command_prints_error():
     printed = []
-    with patch("orion.main.console") as mock_console:
+    # Patch the console in renderer since that's what print_system_error uses
+    with patch("orion.ui.renderer.console") as mock_console:
         mock_console.print = lambda *a, **kw: printed.append(a[0] if a else "")
         await main.handle_slash("/doesnotexist")
-    assert any("unknown" in str(line).lower() for line in printed)
+    
+    all_text = " ".join(_to_str(line) for line in printed).lower()
+    assert "unknown" in all_text
 
 
 @pytest.mark.asyncio
@@ -50,7 +69,7 @@ async def test_help_lists_all_commands():
     with patch("orion.main.console") as mock_console:
         mock_console.print = lambda *a, **kw: printed.append(a[0] if a else "")
         await main.handle_slash("/help")
-    all_text = " ".join(str(line) for line in printed)
+    all_text = " ".join(_to_str(line) for line in printed)
     assert "/help" in all_text
     assert "/clear" in all_text
     assert "/undo" in all_text
@@ -66,7 +85,8 @@ async def test_help_case_insensitive():
     with patch("orion.main.console") as mock_console:
         mock_console.print = lambda *a, **kw: printed.append(a[0] if a else "")
         await main.handle_slash("/HELP")
-    assert any("/clear" in str(line) for line in printed)
+    all_text = " ".join(_to_str(line) for line in printed)
+    assert "/clear" in all_text
 
 
 @pytest.mark.asyncio
@@ -113,12 +133,11 @@ async def test_exit_raises_system_exit():
 @pytest.mark.asyncio
 async def test_undo_no_last_operation_prints_message():
     printed = []
-    # In ui/slash.py, we call pop_last_operation which is imported from orion.memory.store
     with patch("orion.ui.slash.pop_last_operation", return_value=None), \
          patch("orion.main.console") as mock_console:
         mock_console.print = lambda *a, **kw: printed.append(a[0] if a else "")
         await main.slash.undo_last_operation(main.conn, main.console)
-    assert any("nothing to undo" in str(line).lower() for line in printed)
+    assert any("nothing to undo" in _to_str(line).lower() for line in printed)
 
 
 @pytest.mark.asyncio
@@ -139,6 +158,7 @@ async def test_undo_delete_prints_restore_hint():
          patch("orion.main.console") as mock_console:
         mock_console.print = lambda *a, **kw: printed.append(a[0] if a else "")
         await main.slash.undo_last_operation(main.conn, main.console)
-    assert any("trash" in str(line).lower() for line in printed)
+    # The undo delete path currently uses both plain print and Panels for different parts.
+    assert any("trash" in _to_str(line).lower() for line in printed)
 
 

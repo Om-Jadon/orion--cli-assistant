@@ -2,7 +2,13 @@ import re
 import time
 from typing import AsyncGenerator
 from pydantic_ai import Agent
-from orion.ui.renderer import console, stream_response
+from rich.panel import Panel
+from rich import box
+from rich.panel import Panel
+from rich import box
+from orion.ui.renderer import (
+    console, stream_response, print_system_info, print_system_error, print_system_warning
+)
 from orion.ui.spinner import Spinner
 from orion import config
 from orion.core import trace_logging as trace_logging
@@ -98,7 +104,7 @@ async def _run_single_model(
             )
 
             if _looks_like_textual_tool_call(full_response) and attempt < 2:
-                console.print("\n[dim]⟳ retrying...[/dim]")
+                print_system_info("⟳ Detected leaked tool markup; retrying with guidance...")
                 trace_logging.log_llm_retry(
                     reason="textual_tool_call_markup",
                     attempt=attempt_num,
@@ -133,7 +139,7 @@ async def _run_single_model(
                 full_prompt = full_prompt + _TOOL_RETRY_HINT
                 continue
 
-            console.print(f"[error]Error: {e}[/error]")
+            print_system_error(err_str)
             return "", err_str, False, False
 
     return full_response, None, False, True
@@ -185,7 +191,7 @@ async def run_with_streaming(agent: Agent, prompt: str, context: str = "") -> st
             if token_limit_error:
                 if model_index < len(fallback_models) - 1:
                     next_model = fallback_models[model_index + 1]
-                    console.print("\n[dim]⟳ token limit hit, trying fallback model...[/dim]")
+                    print_system_warning(f"Groq token limit hit. Falling back to {next_model}...")
                     trace_logging.log_llm_retry(
                         reason="groq_token_limit_fallback",
                         attempt=model_index + 1,
@@ -203,7 +209,7 @@ async def run_with_streaming(agent: Agent, prompt: str, context: str = "") -> st
                     attempted_models=list(attempted_models),
                     error_type="groq_token_limit_exhausted",
                 )
-                console.print(f"[error]Error: {msg}[/error]")
+                print_system_error(msg)
                 return ""
 
             # Non-token-limit failure keeps existing behavior: no model fallback.

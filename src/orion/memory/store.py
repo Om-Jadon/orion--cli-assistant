@@ -22,6 +22,13 @@ def delete_session_history(conn: sqlite3.Connection, session_id: str):
 
 def get_recent_turns(conn: sqlite3.Connection, session_id: str,
                      max_tokens: int | None = None) -> str:
+    turns = get_recent_turns_list(conn, session_id, max_tokens)
+    lines = [f"{t['role'].upper()}: {t['content']}" for t in turns]
+    return "\n".join(lines)
+
+
+def get_recent_turns_list(conn: sqlite3.Connection, session_id: str,
+                          max_tokens: int | None = None) -> list[dict]:
     if max_tokens is None:
         max_tokens = config.CONTEXT_RECENT
     rows = conn.execute(
@@ -31,16 +38,20 @@ def get_recent_turns(conn: sqlite3.Connection, session_id: str,
         (session_id,)
     ).fetchall()
 
-    lines = []
+    turns = []
     total = 0
     for row in reversed(rows):
-        entry = f"{row['role'].upper()}: {row['content']}"
-        total += _estimate_token_count(entry)
-        if total > max_tokens:
+        role = row["role"]
+        content = row["content"]
+        tokens = _estimate_token_count(f"{role.upper()}: {content}")
+        
+        if total + tokens > max_tokens:
             break
-        lines.append(entry)
+            
+        turns.append({"role": role, "content": content})
+        total += tokens
 
-    return "\n".join(lines)
+    return turns
 
 
 def _estimate_token_count(text: str) -> int:
