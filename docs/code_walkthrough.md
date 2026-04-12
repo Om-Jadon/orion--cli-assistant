@@ -722,6 +722,11 @@ def set_connection(conn):
 
 `main.py` calls `file_tools.set_connection(conn)` at startup. This avoids circular import issues (tools don't import from `main`) and gives the tools access to the shared SQLite connection for both search (via the `files` table) and operation logging (for `/undo`).
 
+**Junk Folding and Filtering:**
+To prevent "token-flood" scenarios, `files.py` maintains an `IGNORE_DIRS` set:
+- `{".git", "node_modules", "__pycache__", ".venv", ".orion", ".pytest_cache"}`
+All directory listings and recursive `find` calls dynamically filter any path containing these patterns, significantly reducing the AI's exploration cost.
+
 **`find_files(query)` — two-tier search:**
 
 ```python
@@ -796,8 +801,11 @@ Using `shlex.shlex` with `punctuation_chars=";&|>"` correctly handles shell meta
 **Destructive detection examples:**
 
 ```python
-# Simple binary check
-if binary in _DESTRUCTIVE_BINARIES:  # {"rm", "mv", "chmod", ...}
+**Docstring-Based Rule Extraction:**
+To reduce base token usage per turn, Orion migrates detailed tool-usage rules (e.g. "always search before reading") from the system prompt into the tool function docstrings. `pydantic-ai` automatically extracts these into the tool's JSON schema, meaning Orion only "pays" for these instructions when actively considering that specific tool.
+
+**Minified System Prompt:**
+The global system prompt is kept as lean as possible, focusing only on core behavioral boundaries (safety, concise output, markdown format). Tool-specific instructions are never repeated in the prompt, ensuring the highest performance-to-cost ratio for each AI turn.
     return True
 
 # Flag-aware: sed -i is destructive (in-place edit), sed alone is not

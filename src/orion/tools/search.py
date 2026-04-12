@@ -5,7 +5,14 @@ from orion.tools.browser import _is_online
 
 
 async def web_search(query: str, max_results: int = 5) -> str:
-    """Search the web via DuckDuckGo and return formatted markdown results."""
+    """
+    Search the web via DuckDuckGo and return formatted markdown results.
+    MANDATORY: For web research, use this tool first to find URLs, then use fetch_page to read the full content of specific URLs.
+    
+    Args:
+        query: The search term or question.
+        max_results: Number of results to return (default 5, max 10).
+    """
     if not _is_online():
         return "Offline: cannot search right now."
 

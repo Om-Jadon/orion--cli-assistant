@@ -40,6 +40,7 @@ All planned stages are implemented (Stage 1 through Stage 7), including the foll
 - **Concurrency Hardening**: Isolated background indexing with dedicated thread-local database connections.
 - **Enhanced Self-Knowledge**: System-prompt injection of local environment and configuration paths.
 - **Slash Command Expansion**: Integrated `/config` for direct settings management.
+- **High-ROI Token Efficiency**: Stage 8.2 refinements including junk folder filtering and docstring-based rule extraction to reduce baseline costs.
 
 ## Core Stack
 
@@ -143,6 +144,7 @@ Tool registration is centralized in build_agent and includes:
 
 - files, shell, browser, search, media tools.
 - trace-wrapped tool handlers that log tool name, parameters, result/error, and latency.
+- **Docstring-Based Rule Extraction**: To reduce base token usage per turn, Orion migrates detailed tool-usage rules (e.g. "always search before reading") from the system prompt into the tool function docstrings. `pydantic-ai` automatically extracts these into the tool's JSON schema, ensuring context is only paid for when relevant.
 
 System prompt enforces:
 
@@ -223,8 +225,8 @@ core/context.py assembles three-tier context for each turn:
 
 tools/files.py:
 
-- find_files: SQLite index lookup first, fallback to `find` with maxdepth-first ordering and safe error fallback.
-- list_directory: bounded output with truncation notice.
+- find_files: SQLite index lookup first, fallback to `find` with maxdepth-first ordering and dynamic skip logic for junk folders.
+- list_directory: bounded output with truncation notice and automatic filtering of heavy directories (node_modules, .venv, etc.).
 - read_file/open_file/move_file/delete_file.
 - delete_file has path validation, existence check, confirmation, async trash call.
 - operation logging for undo and shared connection injection hook.

@@ -24,7 +24,7 @@ It supports cloud providers (OpenAI, Anthropic, Gemini, Groq, Mistral) through p
   - DuckDuckGo search and Playwright-powered page extraction.
 - **Safety Model**:
   - HOME path boundary enforcement and sudo command blocking.
-- **Absolute Resilience**: Hardened TOML parsing with safe-fallbacks for invalid configurations.
+- **Junk Discovery Filtering**: Built-in exclusion of `node_modules`, `.git`, and `.venv` from all file tools.
 
 ## Architecture Overview
 
@@ -87,7 +87,9 @@ Orion state is stored in `~/.orion/`.
 
 - **Interactive Setup**: Automatically runs on first launch.
 - **Manual Edit**: Use `/config` within Orion to open `config.toml` in your default editor.
-- **Resilience**: Even if you misconfigure types in the TOML, Orion will fall back to safe defaults instead of crashing.
+- **Git Undo Mode**: Safety boundaries that allow reversing file deletions/moves.
+- **High-ROI Token Efficiency**: Docstring-based rule extraction and automatic junk directory filtering (node_modules, .venv, etc.).
+- **Catppuccin UI Themes**: Native Mocha and Latte themes for absolute visual assurance.
 
 ---
 *🌌 Developed for absolute technical assurance and high-performance agentic assistance.*

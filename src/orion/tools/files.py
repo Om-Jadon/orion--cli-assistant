@@ -12,6 +12,9 @@ logger = logging.getLogger(__name__)
 _operation_conn = None
 _search_conn = None
 
+# Heavy directories to ignore during discovery to save tokens and prevent "trash" noise.
+IGNORE_DIRS = {".git", "node_modules", "__pycache__", ".venv", ".orion", ".pytest_cache"}
+
 
 def set_connection(conn):
     global _operation_conn, _search_conn
@@ -43,8 +46,9 @@ def _classify_move_action(src: str, dst: str) -> str:
 
 async def find_files(query: str) -> str:
     """
-    Search for files matching a name or keyword pattern.
-    MANDATORY: Use this first to locate a file before reading, opening, or deleting it.
+    Search for files matching a name or keyword pattern. 
+    MANDATORY: You MUST use this to locate a file before reading, opening, or deleting it.
+    This tool recursively searches your home directory (up to depth 8), excluding junk folders like node_modules.
 
     Args:
         query: The filename, extension, or keyword to search for (e.g. 'resume.pdf', '.py', 'notes').
@@ -68,9 +72,14 @@ async def find_files(query: str) -> str:
             logger.debug("find_files index query failed: %s", e)
 
     try:
+        # Build exclude arguments for 'find' command
+        exclude_args = []
+        for d in IGNORE_DIRS:
+            exclude_args.extend(["-not", "-path", f"*/{d}/*"])
+
         out = await asyncio.to_thread(
             subprocess.run,
-            ["find", str(config.HOME), "-maxdepth", "8", "-not", "-path", "*/.*", "-iname", f"*{query}*"],
+            ["find", str(config.HOME), "-maxdepth", "8", "-not", "-path", "*/.*"] + exclude_args + ["-iname", f"*{query}*"],
             capture_output=True,
             text=True,
             timeout=5,
@@ -97,7 +106,13 @@ async def list_directory(path: str) -> str:
     p = Path(resolved)
     if not p.is_dir():
         return f"Not a directory: {resolved}"
-    items = sorted(p.iterdir())
+    
+    # Filter items based on IGNORE_DIRS and hidden files
+    items = sorted(
+        item for item in p.iterdir() 
+        if item.name not in IGNORE_DIRS and not item.name.startswith(".")
+    )
+    
     shown = "\n".join(str(i) for i in items[:50])
     if len(items) > 50:
         shown += f"\n(showing 50 of {len(items)})"
@@ -206,6 +221,8 @@ async def delete_file(path: str) -> str:
 async def write_file(path: str, content: str) -> str:
     """
     Create a new file or overwrite an existing one with specific content.
+    MANDATORY: Use this instead of shell redirection (like '>' or '>>') to ensure safe file creation.
+    This tool handles user confirmation for overwriting existing files.
 
     Args:
         path: The absolute or home-relative path of the file to write.
