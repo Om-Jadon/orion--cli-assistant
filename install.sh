@@ -36,7 +36,7 @@ export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH"
 echo "Fetching and building latest Orion binary (this takes a few seconds)..."
 
 # uv handles Python versioning, venv isolation, and binary linking automatically
-uv tool install --force git+https://github.com/Om-Jadon/cli-assistant.git
+uv tool install --force git+https://github.com/Om-Jadon/orion--cli-assistant.git
 
 echo ""
 echo "Orion is successfully installed!"

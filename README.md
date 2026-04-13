@@ -20,7 +20,7 @@ It supports cloud providers (OpenAI, Anthropic, Gemini, Groq, Mistral) through p
 The easiest way to install Orion on any Linux machine is via the automated installation script. It has zero external dependencies and will automatically fetch Python and the `uv` toolchain natively under the hood if you don't already have them.
 
 ```bash
-curl -sSfL https://raw.githubusercontent.com/Om-Jadon/cli-assistant/main/install.sh | bash
+curl -sSfL https://raw.githubusercontent.com/Om-Jadon/orion--cli-assistant/main/install.sh | bash
 ```
 
 ## Key Features
@@ -73,7 +73,7 @@ cat server.log | orion "find the critical error"
 If you already use `uv`, you can install Orion straight from the repository:
 
 ```bash
-uv tool install git+https://github.com/Om-Jadon/cli-assistant.git
+uv tool install git+https://github.com/Om-Jadon/orion--cli-assistant.git
 ```
 
 ### Development Mode
