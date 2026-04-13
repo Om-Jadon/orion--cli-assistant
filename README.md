@@ -38,13 +38,20 @@ Orion follows a modern `src/` layout for clean packaging:
 
 ## Installation
 
-### Using uv (Recommended)
+### ⚡ Fast Install (Any Linux)
 
-To install `orion` as a global tool:
+The easiest way to install Orion on any Linux machine is via the automated installation script. It has zero external dependencies and will automatically fetch Python and the `uv` toolchain natively under the hood if you don't already have them.
 
 ```bash
-# From the repository root
-uv tool install .
+curl -sSfL https://raw.githubusercontent.com/Om-Jadon/cli-assistant/main/install.sh | bash
+```
+
+### Manual Source Install
+
+If you already use `uv`, you can install Orion straight from the repository:
+
+```bash
+uv tool install git+https://github.com/Om-Jadon/cli-assistant.git
 ```
 
 ### Development Mode
