@@ -11,6 +11,14 @@ Orion is a terminal-first AI assistant for Linux that combines:
 
 It supports cloud providers (OpenAI, Anthropic, Gemini, Groq, Mistral) through provider-aware model configuration.
 
+## ⚡ Fast Install (Any Linux)
+
+The easiest way to install Orion on any Linux machine is via the automated installation script. It has zero external dependencies and will automatically fetch Python and the `uv` toolchain natively under the hood if you don't already have them.
+
+```bash
+curl -sSfL https://raw.githubusercontent.com/Om-Jadon/cli-assistant/main/install.sh | bash
+```
+
 ## Key Features
 
 - **High-Fidelity UI**: Rich formatting, gradients, and Catppuccin themes.
@@ -36,15 +44,7 @@ Orion follows a modern `src/` layout for clean packaging:
 - **UI**: `src/orion/ui/`. Renderer (Rich), Slash registry, and the hardened Onboarding flow.
 - **Tools**: `src/orion/tools/`. Domain-specific tools for files, shells, and browsing.
 
-## Installation
-
-### ⚡ Fast Install (Any Linux)
-
-The easiest way to install Orion on any Linux machine is via the automated installation script. It has zero external dependencies and will automatically fetch Python and the `uv` toolchain natively under the hood if you don't already have them.
-
-```bash
-curl -sSfL https://raw.githubusercontent.com/Om-Jadon/cli-assistant/main/install.sh | bash
-```
+## Advanced Installation
 
 ### Manual Source Install
 
