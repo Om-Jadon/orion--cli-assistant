@@ -31,7 +31,7 @@ def show_startup(console: Console, model: str):
 
     # 1. Branding
     brand = Text()
-    brand.append("✦ orion", style="orion bold")  # Semantic brand color
+    brand.append("✦ orion", style="orion")  # Semantic brand color
     
     # 2. Status Grid
     api_ok = _check_api_key(config.PROVIDER)

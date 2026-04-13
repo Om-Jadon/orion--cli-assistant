@@ -248,7 +248,7 @@ def show_history(conn, session_id: str, console):
                 header.append("User: ", style="cyan")
             elif role == "assistant":
                 header.append("✦ ", style="orion")
-                header.append("Orion: ", style="bold orion")
+                header.append("Orion: ", style="orion")
             else:
                 header.append(f"{role.title()}: ", style="dim")
             
@@ -278,7 +278,7 @@ def show_memory(conn, console):
     profile = get_user_profile(conn)
     if profile:
         table = Table.grid(padding=(0, 2))
-        table.add_column(style="bold accent")
+        table.add_column(style="accent")
         table.add_column(style="dim")
         
         for key, value in profile.items():

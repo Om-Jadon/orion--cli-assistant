@@ -24,9 +24,9 @@ from orion.ui.renderer import print_system_error
 def _print_step(step: int, total: int, title: str):
     """Prints a consistent, stylized phase header."""
     header = Text()
-    header.append(" ◆ ", style=f"{C_PRIMARY} bold")
+    header.append(" ◆ ", style=C_PRIMARY)
     header.append(f"[ {step} / {total} ] ", style=C_DIM)
-    header.append(title.upper(), style=f"{C_TEXT} bold")
+    header.append(title.upper(), style=C_TEXT)
     console.print(header)
     console.print()
 
@@ -98,12 +98,12 @@ def run_onboarding() -> tuple[str | None, str | None, str | None, str | None, st
         table = Table(
             box=box.SIMPLE,
             show_header=True,
-            header_style=f"bold {C_PRIMARY}",
+            header_style=C_PRIMARY,
             border_style=C_DIM,
             padding=(0, 2)
         )
         table.add_column("#", style=C_PRIMARY, justify="right")
-        table.add_column("Provider", style=f"bold {C_TEXT}")
+        table.add_column("Provider", style=C_TEXT)
         table.add_column("Details", style=C_DIM)
         
         table.add_row("1", "OpenAI",    get_recommended_model("openai").split(":", 1)[-1])
