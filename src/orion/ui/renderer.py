@@ -95,18 +95,6 @@ def print_system_error(msg: str):
     console.print()
     console.print(panel)
 
-def print_system_success(msg: str):
-    """Prints a standard Green Rounded Panel for success notifications."""
-    panel = Panel(
-        f"[success]{msg}[/success]",
-        border_style="success",
-        box=box.ROUNDED,
-        padding=(0, 1),
-        expand=False
-    )
-    console.print()
-    console.print(panel)
-
 def print_system_warning(msg: str):
     """Prints a standard Yellow Rounded Panel for warnings."""
     panel = Panel(

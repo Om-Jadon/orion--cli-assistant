@@ -37,6 +37,16 @@ class Spinner:
     def update(self, label: str):
         self._label = label
 
+    def _render_frame(self, frame: str) -> Text:
+        text = Text()
+        text.append("◆ ", style="accent")
+        text.append(frame + " ", style="dim")
+        text.append(self._label, style="dim italic")
+        padding = max(0, self.console.width - len(text.plain))
+        if padding:
+            text.append(" " * padding)
+        return text
+
     async def stop(self):
         global _ACTIVE_SPINNER
         if self._task and not self._task.done():
@@ -55,14 +65,8 @@ class Spinner:
     async def _spin(self):
         try:
             for frame in itertools.cycle(BRAILLE):
-                # Build theme-aware Rich text
-                text = Text()
-                text.append("◆ ", style="accent")
-                text.append(frame + " ", style="dim")
-                text.append(self._label, style="dim italic")
-                
-                # print with \r to keep it on one line
-                self.console.print(text, end="\r")
+                # Pad to console width so shorter labels fully overwrite longer ones.
+                self.console.print(self._render_frame(frame), end="\r")
                 await asyncio.sleep(0.08)
         except asyncio.CancelledError:
             pass

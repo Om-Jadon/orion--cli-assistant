@@ -7,7 +7,7 @@ from rich import box
 from time import perf_counter
 from orion.ui.renderer import (
     console, print_user, print_separator, refresh_console_settings,
-    print_system_error, print_system_success, print_system_warning, print_system_info
+    print_system_error, print_system_info
 )
 from orion.ui.input import build_session, get_input
 from orion.ui.startup import show_startup

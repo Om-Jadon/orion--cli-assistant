@@ -1,4 +1,5 @@
 import importlib
+import tomllib
 import pytest
 from pathlib import Path
 from unittest.mock import patch
@@ -104,6 +105,14 @@ def test_cloud_api_key_vars_contains_all_providers():
     assert required.issubset(config.CLOUD_API_KEY_VARS.keys())
 
 
+def test_version_matches_pyproject():
+    from orion import config
+
+    pyproject = Path(__file__).resolve().parents[1] / "pyproject.toml"
+    data = tomllib.loads(pyproject.read_text(encoding="utf-8"))
+    assert data["project"]["version"] == config.__version__
+
+
 def test_provider_detection_from_model_string(tmp_path):
     """PROVIDER is derived from the model_string prefix in config.toml."""
     import importlib
@@ -111,6 +120,7 @@ def test_provider_detection_from_model_string(tmp_path):
     cases = [
         ("openai:gpt-4o",                  "openai"),
         ("anthropic:claude-sonnet-4-5",    "anthropic"),
+        ("gemini:gemini-3.0-flash",        "gemini"),
         ("gemini-2.0-flash",               "gemini"),
         ("groq:llama-3.3-70b-versatile",   "groq"),
         ("mistral:mistral-large-latest",    "mistral"),
@@ -129,6 +139,34 @@ def test_provider_detection_from_model_string(tmp_path):
     importlib.reload(cfg)
 
 
+def test_provider_detection_edge_cases(tmp_path):
+    import importlib
+    from orion import config as cfg
+
+    cases = [
+        ("GEMINI:gemini-3.0-flash", "gemini"),
+        ("gemini:", "gemini"),
+        ("  openai:gpt-4o", "openai"),
+    ]
+
+    try:
+        for idx, (model_str, expected_provider) in enumerate(cases):
+            toml_file = tmp_path / f"edge_{idx}.toml"
+            toml_file.write_text(f'model_string = "{model_str}"\n')
+            with patch.object(cfg, "CONFIG_FILE", toml_file):
+                importlib.reload(cfg)
+                assert cfg.MODEL_STRING == model_str.strip()
+                assert cfg.PROVIDER == expected_provider
+    finally:
+        importlib.reload(cfg)
+
+
+def test_detect_provider_handles_none():
+    from orion.config import _detect_provider
+
+    assert _detect_provider(None) is None
+
+
 def test_unknown_provider_prefix_results_in_none(tmp_path):
     from orion import config as cfg
     toml_file = tmp_path / "invalid.toml"
@@ -142,3 +180,31 @@ def test_unknown_provider_prefix_results_in_none(tmp_path):
         importlib.reload(cfg)
 
 
+def test_invalid_max_width_logs_warning_and_falls_back(tmp_path):
+    from orion import config as cfg
+
+    toml_file = tmp_path / "config.toml"
+    toml_file.write_text('max_width = "wide"\n')
+    try:
+        with patch.object(cfg, "CONFIG_FILE", toml_file), \
+             patch("orion.config._logger.warning") as mock_warning:
+            importlib.reload(cfg)
+            assert cfg.MAX_WIDTH == cfg._defaults["max_width"]
+            mock_warning.assert_called_once()
+    finally:
+        importlib.reload(cfg)
+
+
+def test_negative_trace_log_retention_logs_warning_and_clamps(tmp_path):
+    from orion import config as cfg
+
+    toml_file = tmp_path / "config.toml"
+    toml_file.write_text("trace_log_retention_days = -5\n")
+    try:
+        with patch.object(cfg, "CONFIG_FILE", toml_file), \
+             patch("orion.config._logger.warning") as mock_warning:
+            importlib.reload(cfg)
+            assert cfg.TRACE_LOG_RETENTION_DAYS == 1
+            mock_warning.assert_called_once()
+    finally:
+        importlib.reload(cfg)

@@ -19,7 +19,7 @@ C_WARN    = "#F9E2AF"  # Yellow
 C_ERROR   = "#F38BA8"  # Red
 C_DIM     = "#6C7086"  # Overlay0
 C_TEXT    = "#CDD6F4"  # Text
-from orion.ui.renderer import print_system_error, print_system_success, print_system_warning
+from orion.ui.renderer import print_system_error
 
 def _print_step(step: int, total: int, title: str):
     """Prints a consistent, stylized phase header."""
@@ -49,6 +49,9 @@ def validate_api_key(provider: str, api_key: str) -> tuple[bool, str]:
             elif provider == "gemini":
                 url = f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}"
                 headers = {}
+            elif provider == "mistral":
+                url = "https://api.mistral.ai/v1/models"
+                headers = {"Authorization": f"Bearer {api_key}"}
             else:
                 return False, "Unknown provider configuration."
             
@@ -107,6 +110,7 @@ def run_onboarding() -> tuple[str | None, str | None, str | None, str | None, st
         table.add_row("2", "Anthropic", get_recommended_model("anthropic").split(":", 1)[-1])
         table.add_row("3", "Groq",      f"[{C_SUCCESS}]Generous Free Tier & High Performance[/{C_SUCCESS}] ({get_recommended_model('groq').split(':', 1)[-1]})")
         table.add_row("4", "Gemini",    get_recommended_model("gemini").split(":", 1)[-1])
+        table.add_row("5", "Mistral",   get_recommended_model("mistral").split(":", 1)[-1])
         
         console.print(Align.left(table, pad=4))
 
@@ -114,10 +118,11 @@ def run_onboarding() -> tuple[str | None, str | None, str | None, str | None, st
             "1": ("openai",    get_recommended_model("openai")),
             "2": ("anthropic", get_recommended_model("anthropic")),
             "3": ("groq",      get_recommended_model("groq")),
-            "4": ("gemini",     get_recommended_model("gemini")),
+            "4": ("gemini",    get_recommended_model("gemini")),
+            "5": ("mistral",   get_recommended_model("mistral")),
         }
         
-        choice = Prompt.ask(f"\n    [{C_TEXT}]Select a backbone[/{C_TEXT}]", choices=["1", "2", "3", "4"], default="3")
+        choice = Prompt.ask(f"\n    [{C_TEXT}]Select a backbone[/{C_TEXT}]", choices=["1", "2", "3", "4", "5"], default="3")
         provider, model_string = choice_map[choice]
 
         # 3. API Key

@@ -2,10 +2,6 @@ import re
 import time
 from typing import AsyncGenerator
 from pydantic_ai import Agent
-from rich.panel import Panel
-from rich import box
-from rich.panel import Panel
-from rich import box
 from orion.ui.renderer import (
     console, stream_response, print_system_info, print_system_error, print_system_warning
 )

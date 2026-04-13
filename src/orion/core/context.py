@@ -21,7 +21,13 @@ async def build_context(conn: sqlite3.Connection, query: str, session_id: str) -
     # Tier 3: Semantic retrieval (always; MIN_RRF_SCORE threshold filters low-relevance noise)
     results = await hybrid_search(conn, query, k=5)
     if results:
-        retrieved = "\n---\n".join(r["content"] for r in results)
-        parts.append(f"RELEVANT MEMORY:\n{retrieved}")
+        snippets = [
+            result.get("content")
+            for result in results
+            if isinstance(result, dict) and result.get("content")
+        ]
+        if snippets:
+            retrieved = "\n---\n".join(snippets)
+            parts.append(f"RELEVANT MEMORY:\n{retrieved}")
 
     return "\n\n".join(parts)

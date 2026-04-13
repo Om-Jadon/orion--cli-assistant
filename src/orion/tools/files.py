@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 import sqlite3
 import shutil
 import subprocess
@@ -42,6 +43,10 @@ def _classify_move_action(src: str, dst: str) -> str:
     if Path(src).parent == dst_path.parent:
         return "rename"
     return "move"
+
+
+def _has_graphical_session() -> bool:
+    return bool(os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))
 
 
 async def find_files(query: str) -> str:
@@ -147,7 +152,14 @@ async def open_file(path: str) -> str:
         return resolved
     if not Path(resolved).exists():
         return f"Not found: {path}. Use find_files first to locate it."
-    subprocess.Popen(["xdg-open", resolved])
+    if not _has_graphical_session():
+        return "Cannot open file: no graphical desktop session detected. Use read_file or open it manually from a desktop session."
+    if shutil.which("xdg-open") is None:
+        return "Cannot open file: xdg-open is not installed on this system."
+    try:
+        subprocess.Popen(["xdg-open", resolved])
+    except OSError as e:
+        return f"Could not open file with xdg-open: {e}"
     return f"Opened {Path(resolved).name}"
 
 
@@ -213,7 +225,11 @@ async def delete_file(path: str) -> str:
         return (
             f"File delete cancelled by user confirmation. path={resolved}"
         )
-    await asyncio.to_thread(subprocess.run, ["gio", "trash", resolved])
+    result = await asyncio.to_thread(
+        subprocess.run, ["gio", "trash", resolved], capture_output=True, text=True
+    )
+    if result.returncode != 0:
+        return f"Error moving to trash: {result.stderr.strip() or 'unknown error'}"
     _log_operation("delete", resolved, "trash")
     return f"Moved to trash: {Path(resolved).name}"
 
@@ -240,6 +256,11 @@ async def write_file(path: str, content: str) -> str:
         source_path=resolved,
     )
     if not confirmed.confirmed:
+        if confirmed.repeated_denial:
+            return (
+                f"File {action} cancelled. Confirmation was already denied for this exact action in this turn. "
+                f"path={resolved}"
+            )
         return f"File {action} cancelled by user confirmation. path={resolved}"
 
     try:

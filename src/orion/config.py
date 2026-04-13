@@ -1,9 +1,10 @@
 import os
+import logging
 import sys as _sys
 import tomllib
 from pathlib import Path
 
-__version__ = "0.2.0"
+__version__ = "1.0.0"
 HOME          = Path.home()
 ORION_DIR     = HOME / ".orion"
 DB_PATH       = ORION_DIR / "memory.db"
@@ -87,6 +88,8 @@ _defaults = {
     "trace_log_retention_days": 7,
 }
 
+_logger = logging.getLogger(__name__)
+
 
 def _as_bool(value, default: bool) -> bool:
     if isinstance(value, bool):
@@ -123,20 +126,49 @@ def _load_user_config() -> dict:
             return {}
     return {}
 
+
+def _warn_config_adjustment(key: str, raw_value: object, adjusted_value: object):
+    _logger.warning(
+        "Invalid or unsupported config value for %s: %r. Using %r instead.",
+        key,
+        raw_value,
+        adjusted_value,
+    )
+
 _user = _load_user_config()
 
 THEME     = _user.get("theme",     _defaults["theme"])
-MAX_WIDTH = _user.get("max_width", _defaults["max_width"])
-if isinstance(MAX_WIDTH, str) and MAX_WIDTH.lower() in ("none", "null", "undefined"):
+_raw_max_width = _user.get("max_width", _defaults["max_width"])
+MAX_WIDTH = _raw_max_width
+if isinstance(_raw_max_width, str) and _raw_max_width.lower() in ("none", "null", "undefined"):
     MAX_WIDTH = None
 else:
-    MAX_WIDTH = _as_int(MAX_WIDTH, _defaults["max_width"])
+    MAX_WIDTH = _as_int(_raw_max_width, _defaults["max_width"])
+    if _raw_max_width != _defaults["max_width"] and MAX_WIDTH == _defaults["max_width"]:
+        _warn_config_adjustment("max_width", _raw_max_width, MAX_WIDTH)
 
 TRACE_LOGGING_ENABLED = _as_bool(
     _user.get("trace_logging_enabled", _defaults["trace_logging_enabled"]),
     _defaults["trace_logging_enabled"],
 )
-TRACE_LOG_RETENTION_DAYS = max(1, _as_int(_user.get("trace_log_retention_days"), _defaults["trace_log_retention_days"]))
+_raw_trace_retention_days = _user.get("trace_log_retention_days", _defaults["trace_log_retention_days"])
+_trace_retention_days = _as_int(_raw_trace_retention_days, _defaults["trace_log_retention_days"])
+if (
+    _raw_trace_retention_days != _defaults["trace_log_retention_days"]
+    and _trace_retention_days == _defaults["trace_log_retention_days"]
+):
+    _warn_config_adjustment(
+        "trace_log_retention_days",
+        _raw_trace_retention_days,
+        _trace_retention_days,
+    )
+TRACE_LOG_RETENTION_DAYS = max(1, _trace_retention_days)
+if TRACE_LOG_RETENTION_DAYS != _trace_retention_days:
+    _warn_config_adjustment(
+        "trace_log_retention_days",
+        _raw_trace_retention_days,
+        TRACE_LOG_RETENTION_DAYS,
+    )
 
 _trace_log_dir_raw = _user.get("trace_log_dir")
 if _trace_log_dir_raw:
@@ -169,15 +201,16 @@ CLOUD_API_KEY_VARS: dict[str, str] = {
 def _detect_provider(model_string: str | None) -> str | None:
     if not model_string:
         return None
-    if model_string.startswith("openai:"):
+    normalized = model_string.lower()
+    if normalized.startswith("openai:"):
         return "openai"
-    if model_string.startswith("anthropic:"):
+    if normalized.startswith("anthropic:"):
         return "anthropic"
-    if model_string.startswith("gemini-"):
+    if normalized.startswith("gemini:") or normalized.startswith("gemini-"):
         return "gemini"
-    if model_string.startswith("groq:"):
+    if normalized.startswith("groq:"):
         return "groq"
-    if model_string.startswith("mistral:"):
+    if normalized.startswith("mistral:"):
         return "mistral"
     return None
 

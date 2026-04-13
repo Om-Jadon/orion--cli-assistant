@@ -9,7 +9,7 @@ def set_connection(conn: sqlite3.Connection):
     global _conn
     _conn = conn
 
-async def manage_user_memory(
+def manage_user_memory(
     action: Literal["upsert", "delete"], 
     key: str, 
     value: str = None

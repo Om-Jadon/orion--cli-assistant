@@ -146,6 +146,147 @@ async def test_read_file_nonexistent():
 
 
 @pytest.mark.asyncio
+async def test_open_file_returns_error_without_graphical_session():
+    from orion.tools.files import open_file
+
+    with tempfile.NamedTemporaryFile(dir=Path.home(), suffix=".txt", delete=False) as f:
+        tmp_path = f.name
+    try:
+        with patch.dict("orion.tools.files.os.environ", {}, clear=True), \
+             patch("orion.tools.files.subprocess.Popen") as mock_popen:
+            result = await open_file(tmp_path)
+
+        assert "no graphical desktop session detected" in result
+        mock_popen.assert_not_called()
+    finally:
+        Path(tmp_path).unlink(missing_ok=True)
+
+
+@pytest.mark.asyncio
+async def test_open_file_returns_error_when_xdg_open_missing():
+    from orion.tools.files import open_file
+
+    with tempfile.NamedTemporaryFile(dir=Path.home(), suffix=".txt", delete=False) as f:
+        tmp_path = f.name
+    try:
+        with patch.dict("orion.tools.files.os.environ", {"DISPLAY": ":0"}, clear=True), \
+             patch("orion.tools.files.shutil.which", return_value=None), \
+             patch("orion.tools.files.subprocess.Popen") as mock_popen:
+            result = await open_file(tmp_path)
+
+        assert "xdg-open is not installed" in result
+        mock_popen.assert_not_called()
+    finally:
+        Path(tmp_path).unlink(missing_ok=True)
+
+
+@pytest.mark.asyncio
+async def test_write_file_blocks_outside_home():
+    from orion.tools.files import write_file
+
+    result = await write_file("/etc/orion_test.txt", "hello")
+    assert "Blocked" in result
+
+
+@pytest.mark.asyncio
+async def test_write_file_creates_new_file_when_confirmed():
+    from orion.tools.files import write_file
+
+    with tempfile.NamedTemporaryFile(dir=Path.home(), suffix=".txt", delete=False) as f:
+        tmp_path = Path(f.name)
+    tmp_path.unlink()
+
+    try:
+        with patch(
+            "orion.safety.confirm.ask_file_action_confirmation",
+            new=AsyncMock(return_value=_confirm_result("confirmed", action="create", source_path=str(tmp_path))),
+        ) as mock_confirm, \
+             patch("orion.tools.files._log_operation") as mock_log:
+            result = await write_file(str(tmp_path), "hello world")
+
+        assert result == f"Successfully createed {tmp_path.name}"
+        assert tmp_path.read_text() == "hello world"
+        mock_confirm.assert_awaited_once()
+        assert mock_confirm.await_args.args[0] == "create"
+        mock_log.assert_called_once_with("create", None, str(tmp_path))
+    finally:
+        tmp_path.unlink(missing_ok=True)
+
+
+@pytest.mark.asyncio
+async def test_write_file_overwrites_existing_file_when_confirmed():
+    from orion.tools.files import write_file
+
+    with tempfile.NamedTemporaryFile(dir=Path.home(), suffix=".txt", delete=False) as f:
+        tmp_path = Path(f.name)
+        tmp_path.write_text("old")
+
+    try:
+        with patch(
+            "orion.safety.confirm.ask_file_action_confirmation",
+            new=AsyncMock(return_value=_confirm_result("confirmed", action="overwrite", source_path=str(tmp_path))),
+        ) as mock_confirm:
+            result = await write_file(str(tmp_path), "new content")
+
+        assert result == f"Successfully overwriteed {tmp_path.name}"
+        assert tmp_path.read_text() == "new content"
+        assert mock_confirm.await_args.args[0] == "overwrite"
+    finally:
+        tmp_path.unlink(missing_ok=True)
+
+
+@pytest.mark.asyncio
+async def test_write_file_cancelled_when_not_confirmed():
+    from orion.tools.files import write_file
+
+    with tempfile.NamedTemporaryFile(dir=Path.home(), suffix=".txt", delete=False) as f:
+        tmp_path = Path(f.name)
+    tmp_path.unlink()
+
+    try:
+        with patch(
+            "orion.safety.confirm.ask_file_action_confirmation",
+            new=AsyncMock(return_value=_confirm_result("denied", action="create", source_path=str(tmp_path))),
+        ) as mock_confirm:
+            result = await write_file(str(tmp_path), "hello")
+
+        assert result == f"File create cancelled by user confirmation. path={tmp_path}"
+        mock_confirm.assert_awaited_once()
+        assert not tmp_path.exists()
+    finally:
+        tmp_path.unlink(missing_ok=True)
+
+
+@pytest.mark.asyncio
+async def test_write_file_repeated_denial_returns_specific_message():
+    from orion.tools.files import write_file
+
+    with tempfile.NamedTemporaryFile(dir=Path.home(), suffix=".txt", delete=False) as f:
+        tmp_path = Path(f.name)
+    tmp_path.unlink()
+
+    try:
+        with patch(
+            "orion.safety.confirm.ask_file_action_confirmation",
+            new=AsyncMock(
+                return_value=_confirm_result(
+                    "denied",
+                    action="create",
+                    source_path=str(tmp_path),
+                    repeated_denial=True,
+                )
+            ),
+        ):
+            result = await write_file(str(tmp_path), "hello")
+
+        assert "Confirmation was already denied for this exact action in this turn" in result
+        assert f"path={tmp_path}" in result
+        assert not tmp_path.exists()
+    finally:
+        tmp_path.unlink(missing_ok=True)
+
+
+@pytest.mark.asyncio
 async def test_move_file_blocks_outside_home():
     from orion.tools.files import move_file
     result = await move_file("/etc/passwd", str(Path.home() / "passwd"))
@@ -243,15 +384,45 @@ async def test_delete_file_trashes_when_confirmed():
     with tempfile.NamedTemporaryFile(dir=Path.home(), suffix=".txt", delete=False) as f:
         tmp_path = f.name
     try:
+        completed = subprocess.CompletedProcess(
+            args=["gio", "trash", tmp_path],
+            returncode=0,
+            stdout="",
+            stderr="",
+        )
         with patch(
             "orion.safety.confirm.ask_file_action_confirmation",
             new=AsyncMock(return_value=_confirm_result("confirmed", action="delete", source_path=tmp_path)),
         ) as mock_confirm, \
-             patch("orion.tools.files.asyncio.to_thread", new=AsyncMock()) as mock_to_thread:
+             patch("orion.tools.files.asyncio.to_thread", new=AsyncMock(return_value=completed)) as mock_to_thread:
             result = await delete_file(tmp_path)
 
         assert "Moved to trash:" in result
         mock_confirm.assert_awaited_once()
         assert mock_to_thread.await_count == 1
+    finally:
+        Path(tmp_path).unlink(missing_ok=True)
+
+
+@pytest.mark.asyncio
+async def test_delete_file_returns_error_when_trash_command_fails():
+    from orion.tools.files import delete_file
+
+    with tempfile.NamedTemporaryFile(dir=Path.home(), suffix=".txt", delete=False) as f:
+        tmp_path = f.name
+    try:
+        failed = subprocess.CompletedProcess(
+            args=["gio", "trash", tmp_path],
+            returncode=1,
+            stdout="",
+            stderr="permission denied",
+        )
+        with patch(
+            "orion.safety.confirm.ask_file_action_confirmation",
+            new=AsyncMock(return_value=_confirm_result("confirmed", action="delete", source_path=tmp_path)),
+        ), patch("orion.tools.files.asyncio.to_thread", new=AsyncMock(return_value=failed)):
+            result = await delete_file(tmp_path)
+
+        assert result == "Error moving to trash: permission denied"
     finally:
         Path(tmp_path).unlink(missing_ok=True)

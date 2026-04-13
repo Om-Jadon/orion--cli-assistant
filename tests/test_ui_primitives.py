@@ -97,3 +97,17 @@ async def test_spinner_stop_without_start_is_safe():
     console = MagicMock()
     s = Spinner(console)
     await s.stop()  # should not raise
+
+
+def test_spinner_render_frame_pads_shorter_labels():
+    from orion.ui.spinner import Spinner
+
+    console = MagicMock()
+    console.width = 30
+    s = Spinner(console)
+    s.update("thinking")
+
+    frame = s._render_frame("⠋")
+
+    assert frame.plain.startswith("◆ ⠋ thinking")
+    assert len(frame.plain) >= console.width

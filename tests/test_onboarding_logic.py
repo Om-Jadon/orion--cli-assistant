@@ -2,7 +2,8 @@ import pytest
 from unittest.mock import patch, MagicMock
 from orion import main
 from orion import config
-from pathlib import Path
+from orion.core.model_fallback import get_recommended_model
+from orion.ui.onboarding import validate_api_key
 
 @pytest.fixture
 def temp_config(tmp_path):
@@ -40,3 +41,25 @@ def test_cli_entry_triggers_onboarding_if_not_ready(
     mock_save.assert_called_once_with("openai:gpt-4o", "sk-test")
     # setup_runtime should be called after onboarding
     mock_setup.assert_called_once()
+
+
+def test_recommended_model_includes_mistral():
+    assert get_recommended_model("mistral") == "mistral:mistral-large-latest"
+
+
+def test_validate_api_key_supports_mistral():
+    response = MagicMock(status_code=200)
+    client = MagicMock()
+    client.get.return_value = response
+    client.__enter__.return_value = client
+    client.__exit__.return_value = None
+
+    with patch("orion.ui.onboarding.httpx.Client", return_value=client):
+        is_valid, err = validate_api_key("mistral", "mistral-test-key")
+
+    assert is_valid is True
+    assert err == ""
+    client.get.assert_called_once_with(
+        "https://api.mistral.ai/v1/models",
+        headers={"Authorization": "Bearer mistral-test-key"},
+    )

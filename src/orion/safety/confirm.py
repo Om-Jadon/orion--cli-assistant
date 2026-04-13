@@ -89,7 +89,7 @@ async def ask_confirmation(description: str) -> bool:
         console.print()
         console.print(warning_panel)
         from prompt_toolkit.formatted_text import HTML
-        answer = await _SESSION.prompt_async(HTML("   <ansired><b>❯</b></ansired> "))
+        answer = await _SESSION.prompt_async(HTML("   <ansired><b>&gt;</b></ansired> "))
         return answer.strip().lower() in ("y", "yes")
     finally:
         resume_live()

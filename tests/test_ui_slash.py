@@ -125,6 +125,31 @@ async def test_scan_runs_indexer():
 
 
 @pytest.mark.asyncio
+async def test_config_uses_editor_fallback_without_graphical_session():
+    with patch.dict("orion.ui.slash.os.environ", {"EDITOR": "nano"}, clear=True), \
+         patch("orion.ui.slash._shutil.which", return_value=None), \
+         patch("orion.ui.slash.subprocess.run") as mock_run:
+        await main.handle_slash("/config")
+
+    args = mock_run.call_args.args[0]
+    assert args[0] == "nano"
+
+
+@pytest.mark.asyncio
+async def test_config_reports_error_when_no_gui_and_no_editor():
+    printed = []
+    with patch.dict("orion.ui.slash.os.environ", {}, clear=True), \
+         patch("orion.ui.slash._shutil.which", return_value=None), \
+         patch("orion.main.console") as mock_console:
+        mock_console.print = lambda *a, **kw: printed.append(a[0] if a else "")
+        await main.handle_slash("/config")
+
+    all_text = " ".join(_to_str(line).lower() for line in printed)
+    assert "could not open config file" in all_text
+    assert "no graphical session detected" in all_text
+
+
+@pytest.mark.asyncio
 async def test_exit_raises_system_exit():
     with pytest.raises(SystemExit):
         await main.handle_slash("/exit")
@@ -160,5 +185,4 @@ async def test_undo_delete_prints_restore_hint():
         await main.slash.undo_last_operation(main.conn, main.console)
     # The undo delete path currently uses both plain print and Panels for different parts.
     assert any("trash" in _to_str(line).lower() for line in printed)
-
 

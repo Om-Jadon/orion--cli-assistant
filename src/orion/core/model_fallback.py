@@ -14,6 +14,7 @@ RECOMMENDED_MODELS: dict[str, str] = {
     "anthropic": "anthropic:claude-3-5-sonnet-latest",
     "groq":      GROQ_TOKEN_LIMIT_FALLBACK_MODELS[0],
     "gemini":    "gemini:gemini-3.0-flash",
+    "mistral":   "mistral:mistral-large-latest",
 }
 
 

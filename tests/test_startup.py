@@ -1,35 +1,34 @@
 import pytest
-from unittest.mock import patch, MagicMock
+import sqlite3
+from unittest.mock import patch
 
 
-def test_check_db_false_when_missing(tmp_path):
+def test_get_db_status_returns_false_zero_when_missing(tmp_path):
     from orion.ui import startup
     with patch("orion.config.DB_PATH", tmp_path / "missing.db"):
-        assert startup._check_db() is False
+        assert startup._get_db_status() == (False, 0)
 
 
-def test_check_db_true_when_exists(tmp_path):
+def test_get_db_status_returns_true_zero_when_db_exists_without_index_table(tmp_path):
     from orion.ui import startup
+
     db = tmp_path / "orion.memory.db"
-    db.touch()
+    conn = sqlite3.connect(db)
+    conn.close()
     with patch("orion.config.DB_PATH", db):
-        assert startup._check_db() is True
+        assert startup._get_db_status() == (False, 0)
 
 
-def test_check_index_false_when_db_missing(tmp_path):
-    from orion.ui import startup
-    with patch("orion.config.DB_PATH", tmp_path / "missing.db"):
-        assert startup._check_index() is False
-
-
+@pytest.mark.filterwarnings("ignore::pytest.PytestUnraisableExceptionWarning")
 def test_show_startup_does_not_raise():
+    from io import StringIO
+    from rich.console import Console
     from orion.ui import startup as su
-    console = MagicMock()
+    console = Console(file=StringIO(), highlight=False, width=120)
     with patch("orion.config.PROVIDER", "openai"), \
+         patch.object(su, "ensure_browser_engine"), \
          patch.object(su, "_check_api_key", return_value=True), \
-         patch.object(su, "_check_db", return_value=True), \
-         patch.object(su, "_check_index", return_value=True), \
-         patch.object(su, "_index_count", return_value=123):
+         patch.object(su, "_get_db_status", return_value=(True, 123)):
         su.show_startup(console, "openai:gpt-4o")
 
 
@@ -59,6 +58,7 @@ def test_check_api_key_unknown_provider_returns_true():
     from orion.ui.startup import _check_api_key
     assert _check_api_key("unknown_provider") is True
 
+@pytest.mark.filterwarnings("ignore::pytest.PytestUnraisableExceptionWarning")
 def test_tagline_in_show_startup():
     """show_startup prints 'quick · fluent · native' unconditionally."""
     from rich.console import Console
@@ -68,9 +68,9 @@ def test_tagline_in_show_startup():
     buf = StringIO()
     con = Console(file=buf, highlight=False, width=120)
     with _patch("orion.config.PROVIDER", "openai"), \
+         _patch("orion.ui.startup.ensure_browser_engine"), \
          _patch("orion.ui.startup._check_api_key", return_value=True), \
-         _patch("orion.ui.startup._check_db", return_value=False), \
-         _patch("orion.ui.startup._check_index", return_value=False):
+         _patch("orion.ui.startup._get_db_status", return_value=(False, 0)):
         su.show_startup(con, "openai:gpt-4o")
     output = buf.getvalue()
     assert "quick" in output

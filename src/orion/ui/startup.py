@@ -35,8 +35,8 @@ def show_startup(console: Console, model: str):
     
     # 2. Status Grid
     api_ok = _check_api_key(config.PROVIDER)
-    db_ok = _check_db()
-    index_ok = _check_index()
+    db_ok, file_count = _get_db_status()
+    index_ok = file_count > 0
     
     grid = Table.grid(padding=(0, 2))
     grid.add_column(style="dim #6C7086")  # Label
@@ -45,7 +45,7 @@ def show_startup(console: Console, model: str):
     checks = [
         (config.PROVIDER, api_ok,   "ready" if api_ok else "missing"),
         ("memory", db_ok,    "active" if db_ok else "run /scan"),
-        ("index",  index_ok, f"{_index_count():,} files" if index_ok else "run /scan"),
+        ("index",  index_ok, f"{file_count:,} files" if index_ok else "run /scan"),
     ]
 
     for name, ok, status_text in checks:
@@ -99,26 +99,15 @@ def _check_api_key(provider: str) -> bool:
     console.print()
     sys.exit(1)
 
-def _check_db() -> bool:
-    return config.DB_PATH.exists()
-
-def _check_index() -> bool:
+def _get_db_status() -> tuple[bool, int]:
     if not config.DB_PATH.exists():
-        return False
+        return False, 0
     import sqlite3
+    conn = sqlite3.connect(config.DB_PATH)
     try:
-        with sqlite3.connect(config.DB_PATH) as conn:
-            count = conn.execute("SELECT COUNT(*) FROM files").fetchone()[0]
-            return count > 0
+        file_count = conn.execute("SELECT COUNT(*) FROM files").fetchone()[0]
+        return True, file_count
     except Exception:
-        return False
-
-def _index_count() -> int:
-    if not config.DB_PATH.exists():
-        return 0
-    import sqlite3
-    try:
-        with sqlite3.connect(config.DB_PATH) as conn:
-            return conn.execute("SELECT COUNT(*) FROM files").fetchone()[0]
-    except Exception:
-        return 0
+        return False, 0
+    finally:
+        conn.close()

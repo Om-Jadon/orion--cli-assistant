@@ -1,5 +1,4 @@
 import logging
-import subprocess
 import socket
 from pathlib import Path
 import trafilatura

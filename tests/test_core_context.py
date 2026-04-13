@@ -119,3 +119,22 @@ async def test_retrieval_injected_when_results_exist():
         assert "We discussed Python yesterday" in result
     finally:
         conn.close()
+
+
+@pytest.mark.asyncio
+async def test_retrieval_skips_results_missing_content():
+    from orion.core.context import build_context
+
+    conn = make_conn()
+    try:
+        mock_results = [
+            {"source": "test"},
+            {"content": "", "source": "test"},
+            {"content": "Useful memory", "source": "test"},
+        ]
+        with patch("orion.core.context.hybrid_search", new=AsyncMock(return_value=mock_results)):
+            result = await build_context(conn, "what is python?", session_id="s1")
+        assert "RELEVANT MEMORY:" in result
+        assert "Useful memory" in result
+    finally:
+        conn.close()

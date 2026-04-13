@@ -1,4 +1,3 @@
-import subprocess
 from orion.tools.browser import _is_online
 from orion.tools.search import web_search_raw
 

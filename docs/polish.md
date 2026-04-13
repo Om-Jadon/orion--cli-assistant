@@ -1,3 +1,8 @@
+## Status
+- Reviewed on 2026-04-13.
+- This file is now a historical backlog, not a source of truth for current release readiness.
+- Use `docs/audit_v1.md` for the current open-issues list.
+
 ### Known Issues 🐛
 - **Groq Model Overrides**: Manual model changes in `config.toml` (e.g. for testing) are currently ignored by the fallback logic if they aren't in the fixed fallback chain.
 - **Initialization Resilience**: Caught initialization failures now present a clean panel, but standardizing the environment injection path is ongoing.

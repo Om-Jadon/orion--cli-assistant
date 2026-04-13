@@ -1,20 +1,34 @@
 import asyncio
 from dataclasses import dataclass
+import os
 from pathlib import Path
 import shutil as _shutil
+import subprocess
 from typing import Any
 from rich.panel import Panel
 from rich import box
 from rich.table import Table
 
 from orion.memory.store import pop_last_operation, get_recent_turns_list, get_user_profile
-from orion.ui.renderer import print_system_error, print_system_info, print_system_warning
+from orion.ui.renderer import print_system_error, print_system_info
 
 
 @dataclass
 class RuntimeState:
     agent: Any
     session_id: str
+
+
+def _has_graphical_session() -> bool:
+    return bool(os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))
+
+
+def _get_preferred_editor() -> str | None:
+    for env_var in ("VISUAL", "EDITOR"):
+        value = os.environ.get(env_var)
+        if value and value.strip():
+            return value.strip()
+    return None
 
 
 async def handle_slash(
@@ -39,7 +53,7 @@ async def handle_slash(
             ("/history", "show this session's conversation"),
             ("/reset",   "clear current conversation context"),
             ("/memory",  "show what orion knows about you"),
-            ("/config",  "open configuration file in editor"),
+            ("/config",  "open configuration file"),
             ("/scan",    "re-index your home directory"),
             ("/exit",    "quit orion"),
         ]
@@ -83,12 +97,29 @@ async def handle_slash(
 
     if command == "/config":
         from orion import config
-        import subprocess
-        print_system_info(f"Opening [bold]{config.CONFIG_FILE}[/bold] in your editor...\n[#89B4FA]Note: Restart Orion for changes to take effect.[/#89B4FA]")
+
+        config_path = str(config.CONFIG_FILE)
+        editor = _get_preferred_editor()
         try:
-            # xdg-open is standard on most Linux desktops.
-            # Using str() ensures Path object is converted for subprocess.
-            subprocess.run(["xdg-open", str(config.CONFIG_FILE)], check=True)
+            if _has_graphical_session() and _shutil.which("xdg-open"):
+                print_system_info(
+                    f"Opening [bold]{config.CONFIG_FILE}[/bold] with xdg-open...\n"
+                    f"[#89B4FA]Note: Restart Orion for changes to take effect.[/#89B4FA]"
+                )
+                subprocess.run(["xdg-open", config_path], check=True)
+                return
+
+            if editor:
+                print_system_info(
+                    f"Opening [bold]{config.CONFIG_FILE}[/bold] with {editor}...\n"
+                    f"[#89B4FA]Note: Restart Orion for changes to take effect.[/#89B4FA]"
+                )
+                subprocess.run([editor, config_path], check=True)
+                return
+
+            console.print(
+                "[error]Could not open config file:[/error] no graphical session detected and no $VISUAL/$EDITOR is configured."
+            )
         except Exception as exc:
             console.print(f"[error]Could not open config file:[/error] {exc}")
         return
@@ -138,8 +169,6 @@ async def undo_last_operation(conn, console) -> str | None:
             console.print("[error]Deletion metadata incomplete; cannot undo.[/error]")
             return
         try:
-            import subprocess
-            
             # gio trash --restore often requires the trash:/// URI, not the original path.
             # We find it by matching the original path in 'gio trash --list'.
             list_proc = await asyncio.to_thread(
@@ -182,7 +211,6 @@ async def undo_last_operation(conn, console) -> str | None:
             console.print("[warning]Cannot undo: created file no longer exists.[/warning]")
             return
         try:
-            import subprocess
             res = await asyncio.to_thread(
                 subprocess.run,
                 ["gio", "trash", destination],
