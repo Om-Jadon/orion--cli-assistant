@@ -1,5 +1,9 @@
 # Orion CLI Assistant
 
+![Python 3.13+](https://img.shields.io/badge/python-3.13+-blue.svg)
+![OS Linux](https://img.shields.io/badge/os-linux-green.svg)
+![License MIT](https://img.shields.io/badge/license-MIT-blue.svg)
+
 Orion is a terminal-first AI assistant for Linux that combines:
 
 - conversational help,
@@ -44,6 +48,24 @@ Orion follows a modern `src/` layout for clean packaging:
 - **UI**: `src/orion/ui/`. Renderer (Rich), Slash registry, and the hardened Onboarding flow.
 - **Tools**: `src/orion/tools/`. Domain-specific tools for files, shells, and browsing.
 
+## Usage
+
+**Interactive Prompt:**
+```bash
+orion
+```
+*Tip: Type `/help` inside the session to see all available slash commands.*
+
+**One-shot Mode:**
+```bash
+orion "summarize this repository"
+```
+
+**Pipe Mode:**
+```bash
+cat server.log | orion "find the critical error"
+```
+
 ## Advanced Installation
 
 ### Manual Source Install
@@ -70,24 +92,6 @@ Orion is distribution-ready with a **197-test suite** covering core logic, tool 
 uv run pytest
 ```
 
-## Usage
-
-**Interactive Prompt:**
-```bash
-orion
-```
-*Tip: Type `/help` inside the session to see all available slash commands.*
-
-**One-shot Mode:**
-```bash
-orion "summarize this repository"
-```
-
-**Pipe Mode:**
-```bash
-cat server.log | orion "find the critical error"
-```
-
 ## Configuration
 
 Orion state is stored in `~/.orion/`. 
@@ -97,6 +101,3 @@ Orion state is stored in `~/.orion/`.
 - **Git Undo Mode**: Safety boundaries that allow reversing file deletions/moves.
 - **High-ROI Token Efficiency**: Docstring-based rule extraction and automatic junk directory filtering (node_modules, .venv, etc.).
 - **Catppuccin UI Themes**: Native Mocha and Latte themes for absolute visual assurance.
-
----
-*🌌 Developed for absolute technical assurance and high-performance agentic assistance.*
