@@ -34,6 +34,8 @@ async def test_main_pipe_mode_calls_streaming():
     with patch.object(main.sys, "argv", ["orion", "summarize this"]), \
          patch.object(main.sys.stdin, "isatty", return_value=False), \
          patch.object(main.sys.stdin, "read", return_value="line1\nline2\n"), \
+         patch("orion.main.conn", new=MagicMock()), \
+         patch("orion.main.state", new=MagicMock()), \
          patch("orion.main.run_with_streaming", new=AsyncMock(return_value="OK")) as mock_stream, \
          patch("builtins.print"):
         await main.main()

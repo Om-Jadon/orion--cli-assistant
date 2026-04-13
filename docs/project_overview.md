@@ -41,6 +41,7 @@ All planned stages are implemented (Stage 1 through Stage 7), including the foll
 - **Enhanced Self-Knowledge**: System-prompt injection of local environment and configuration paths.
 - **Slash Command Expansion**: Integrated `/config` for direct settings management.
 - **High-ROI Token Efficiency**: Stage 8.2 refinements including junk folder filtering and docstring-based rule extraction to reduce baseline costs.
+- **Production Audit (v1.0)**: Executed and resolved 100% of pre-release blockers, including robust FTS/Vec hybrid boundary testing, UI theme compliance, integration testing, and SQLite concurrency logging.
 
 ## Core Stack
 
@@ -411,7 +412,7 @@ Test suite coverage includes:
 
 Current verification state:
 
-- Full test suite passing (176 tests).
+- Full test suite passing (197 tests).
 
 ## Notes for Future Development
 

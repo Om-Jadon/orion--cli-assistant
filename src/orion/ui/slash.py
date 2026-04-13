@@ -63,9 +63,9 @@ async def handle_slash(
 
         help_panel = Panel(
             grid,
-            title="[#cba6f7]✦ slash commands[/#cba6f7]",
+            title="[orion]✦ slash commands[/orion]",
             title_align="left",
-            border_style="#89B4FA",
+            border_style="accent",
             box=box.ROUNDED,
             padding=(0, 2),
             expand=False
@@ -104,7 +104,7 @@ async def handle_slash(
             if _has_graphical_session() and _shutil.which("xdg-open"):
                 print_system_info(
                     f"Opening [bold]{config.CONFIG_FILE}[/bold] with xdg-open...\n"
-                    f"[#89B4FA]Note: Restart Orion for changes to take effect.[/#89B4FA]"
+                    f"[accent]Note: Restart Orion for changes to take effect.[/accent]"
                 )
                 subprocess.run(["xdg-open", config_path], check=True)
                 return
@@ -112,7 +112,7 @@ async def handle_slash(
             if editor:
                 print_system_info(
                     f"Opening [bold]{config.CONFIG_FILE}[/bold] with {editor}...\n"
-                    f"[#89B4FA]Note: Restart Orion for changes to take effect.[/#89B4FA]"
+                    f"[accent]Note: Restart Orion for changes to take effect.[/accent]"
                 )
                 subprocess.run([editor, config_path], check=True)
                 return
@@ -247,8 +247,8 @@ def show_history(conn, session_id: str, console):
             if role == "user":
                 header.append("User: ", style="cyan")
             elif role == "assistant":
-                header.append("✦ ", style="#cba6f7")
-                header.append("Orion: ", style="bold #cba6f7")
+                header.append("✦ ", style="orion")
+                header.append("Orion: ", style="bold orion")
             else:
                 header.append(f"{role.title()}: ", style="dim")
             
@@ -261,9 +261,9 @@ def show_history(conn, session_id: str, console):
 
         history_panel = Panel(
             Group(*elements),
-            title="[#cba6f7]✦ session history[/#cba6f7]",
+            title="[orion]✦ session history[/orion]",
             title_align="left",
-            border_style="#45475a", # Surface1 (subtle)
+            border_style="muted", # Surface1 (subtle)
             box=box.ROUNDED,
             padding=(0, 2),
             expand=False
@@ -278,7 +278,7 @@ def show_memory(conn, console):
     profile = get_user_profile(conn)
     if profile:
         table = Table.grid(padding=(0, 2))
-        table.add_column(style="bold #89B4FA")
+        table.add_column(style="bold accent")
         table.add_column(style="dim")
         
         for key, value in profile.items():
@@ -288,9 +288,9 @@ def show_memory(conn, console):
             
         memory_panel = Panel(
             table,
-            title="[#cba6f7]✦ orion's memory[/#cba6f7]",
+            title="[orion]✦ orion's memory[/orion]",
             title_align="left",
-            border_style="#89B4FA",
+            border_style="accent",
             box=box.ROUNDED,
             padding=(0, 2),
             expand=False

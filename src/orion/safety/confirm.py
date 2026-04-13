@@ -10,7 +10,14 @@ DESTRUCTIVE_KEYWORDS = [
     "overwrite", "replace", "format",
 ]
 
+# We use a single module-level PromptSession. Since `parallel_tool_calls: False` is 
+# configured in PydanticAI, tool executions (and thus confirmations) are strictly sequential.
+# There is no risk of PromptSession re-entrancy from parallel tools.
 _SESSION = PromptSession()
+
+# This tracks denied actions to prevent redundant reprompting if an agent loops or retries.
+# It is cleared at the beginning of every user turn via reset_turn_state(), ensuring
+# memory is strictly bounded per-turn and does not leak across long sessions.
 _denied_action_keys: set[str] = set()
 
 

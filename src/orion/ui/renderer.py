@@ -10,8 +10,8 @@ from orion import config
 
 MOCHA = Theme({
     "user":      "bold #CDD6F4",
-    "assistant": "#89DCEB",
-    "orion":     "#89DCEB",
+    "assistant": "#CBA6F7",
+    "orion":     "#CBA6F7",
     "dim":       "#6C7086",
     "thinking":  "italic #585B70",
     "success":   "#A6E3A1",
@@ -24,8 +24,8 @@ MOCHA = Theme({
 
 LATTE = Theme({
     "user":      "bold #4C4F69",
-    "assistant": "#04A5E5",
-    "orion":     "#04A5E5",
+    "assistant": "#8839EF",
+    "orion":     "#8839EF",
     "dim":       "#9CA0B0",
     "thinking":  "italic #ACB0BE",
     "success":   "#40A02B",
@@ -79,7 +79,7 @@ def highlight_paths(text: str) -> str:
 
 def print_user(text: str):
     user_name = config.USER_NAME or "You"
-    console.print(f"[dim]{user_name}:[/dim] {text}")
+    console.print(f"[user]{user_name}:[/user] {text}")
     console.print()
 
 def print_system_error(msg: str):
@@ -112,7 +112,7 @@ def print_system_info(msg: str):
     """Prints a standard neutral/dim Rounded Panel for info notifications."""
     panel = Panel(
         f"[dim]{msg}[/dim]",
-        border_style="#45475a", # Surface1 (subtle)
+        border_style="muted", # Surface1 (subtle)
         box=box.ROUNDED,
         padding=(0, 1),
         expand=False
@@ -121,7 +121,7 @@ def print_system_info(msg: str):
     console.print(panel)
 
 def print_separator():
-    console.print(Rule(style="#313244"))
+    console.print(Rule(style="border"))
 
 async def stream_response(token_gen) -> str:
     """
@@ -133,9 +133,9 @@ async def stream_response(token_gen) -> str:
     console.print()
 
     panel_kwargs = dict(
-        title="[bold #cba6f7]✦ orion[/bold #cba6f7]",
+        title="[bold orion]✦ orion[/bold orion]",
         title_align="left",
-        border_style="#cba6f7",
+        border_style="orion",
         box=box.ROUNDED,
         padding=(0, 1),
     )

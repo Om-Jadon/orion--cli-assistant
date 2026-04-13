@@ -248,6 +248,9 @@ async def write_file(path: str, content: str) -> str:
     if not ok:
         return resolved
 
+    if len(content) > 100_000:
+        return f"File write blocked: Content length ({len(content):,} chars) exceeds safety cap of 100,000 chars."
+
     p = Path(resolved)
     action = "overwrite" if p.exists() else "create"
 

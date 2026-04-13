@@ -8,7 +8,7 @@ from rich.panel import Panel
 from rich import box
 from orion import config
 
-console = Console()
+from orion.ui.renderer import console
 
 def ensure_browser_engine(console_obj: Console = console):
     """Checks for Playwright binaries and installs them if missing."""
@@ -31,7 +31,7 @@ def show_startup(console: Console, model: str):
 
     # 1. Branding
     brand = Text()
-    brand.append("✦ orion", style="#cba6f7 bold")  # Mauve
+    brand.append("✦ orion", style="orion bold")  # Semantic brand color
     
     # 2. Status Grid
     api_ok = _check_api_key(config.PROVIDER)
@@ -39,8 +39,8 @@ def show_startup(console: Console, model: str):
     index_ok = file_count > 0
     
     grid = Table.grid(padding=(0, 2))
-    grid.add_column(style="dim #6C7086")  # Label
-    grid.add_column(style="bold #585B70") # Value
+    grid.add_column(style="dim")  # Label
+    grid.add_column(style="thinking") # Value
 
     checks = [
         (config.PROVIDER, api_ok,   "ready" if api_ok else "missing"),
@@ -49,14 +49,14 @@ def show_startup(console: Console, model: str):
     ]
 
     for name, ok, status_text in checks:
-        dot = "[#A6E3A1]●[/#A6E3A1]" if ok else "[#F38BA8]●[/#F38BA8]"
+        dot = "[success]●[/success]" if ok else "[error]●[/error]"
         grid.add_row(f"{dot} {name}", status_text)
 
     # 3. Assemble Startup Panel
     header = Text.from_markup(f"[{config.THEME}]v{config.__version__} · {model}[/]")
     
     startup_content = Table.grid(padding=(1, 0))
-    startup_content.add_row(Text("quick · fluent · native", style="#6C7086 italic"))
+    startup_content.add_row(Text("quick · fluent · native", style="dim italic"))
     startup_content.add_row(grid)
 
     startup_panel = Panel(
@@ -64,7 +64,7 @@ def show_startup(console: Console, model: str):
         title=brand,
         subtitle=header,
         subtitle_align="left",
-        border_style="#45475A", # Surface1
+        border_style="muted", # Surface1
         box=box.ROUNDED,
         padding=(0, 2),
         expand=False
@@ -83,16 +83,16 @@ def _check_api_key(provider: str) -> bool:
         return True
     
     error_msg = Text.from_markup(
-        f"[bold #F38BA8]Error:[/] [bold #CDD6F4]{env_var}[/] is not set.\n\n"
+        f"[bold error]Error:[/] [user]{env_var}[/] is not set.\n\n"
         f"Export it in your shell before starting orion:\n\n"
-        f"  [#89B4FA]export {env_var}=<your-key>[/]"
+        f"  [accent]export {env_var}=<your-key>[/accent]"
     )
     console.print()
     console.print(Panel(
         error_msg,
-        border_style="#F38BA8",
+        border_style="error",
         padding=(1, 2),
-        title="[bold #F38BA8]Missing Authentication[/]",
+        title="[bold error]Missing Authentication[/]",
         title_align="left",
         box=box.ROUNDED
     ))

@@ -24,7 +24,8 @@ def test_show_startup_does_not_raise():
     from io import StringIO
     from rich.console import Console
     from orion.ui import startup as su
-    console = Console(file=StringIO(), highlight=False, width=120)
+    from orion.ui.renderer import get_theme
+    console = Console(file=StringIO(), theme=get_theme("mocha"), highlight=False, width=120)
     with patch("orion.config.PROVIDER", "openai"), \
          patch.object(su, "ensure_browser_engine"), \
          patch.object(su, "_check_api_key", return_value=True), \
@@ -65,8 +66,9 @@ def test_tagline_in_show_startup():
     from io import StringIO
     from unittest.mock import patch as _patch
     from orion.ui import startup as su
+    from orion.ui.renderer import get_theme
     buf = StringIO()
-    con = Console(file=buf, highlight=False, width=120)
+    con = Console(file=buf, theme=get_theme("mocha"), highlight=False, width=120)
     with _patch("orion.config.PROVIDER", "openai"), \
          _patch("orion.ui.startup.ensure_browser_engine"), \
          _patch("orion.ui.startup._check_api_key", return_value=True), \

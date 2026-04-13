@@ -88,3 +88,43 @@ async def test_hybrid_search_logs_debug_for_fts_and_vec_errors():
 
     assert results == []
     assert mock_debug.call_count >= 2
+
+@pytest.mark.asyncio
+async def test_hybrid_search_succeeds_when_only_fts_matches():
+    from orion.memory.retrieval import hybrid_search
+
+    conn = make_in_memory_conn()
+    try:
+        # FTS matched but Vector returns nothing (due to missing embedding or threshold logic)
+        conn.execute("INSERT INTO vec_meta (rowid, content, source) VALUES (1, 'keyword only', 'test')")
+        conn.execute("INSERT INTO memory_fts (rowid, content, key, source) VALUES (1, 'keyword only', 'key1', 'test')")
+        conn.commit()
+
+        with patch("orion.memory.retrieval.embed", new=AsyncMock(return_value=[0.1] * EMBED_DIM)):
+            results = await hybrid_search(conn, "keyword only", k=5)
+
+        assert len(results) == 1
+        assert results[0]["content"] == "keyword only"
+    finally:
+        conn.close()
+
+@pytest.mark.asyncio
+async def test_hybrid_search_succeeds_when_only_vec_matches():
+    from orion.memory.retrieval import hybrid_search
+
+    conn = make_in_memory_conn()
+    try:
+        # Vector matched but FTS returns nothing (no keyword match)
+        conn.execute("INSERT INTO vec_meta (rowid, content, source) VALUES (2, 'semantic meaning', 'test')")
+        test_vector = [0.1] * EMBED_DIM
+        conn.execute("INSERT INTO vec_memory (rowid, embedding) VALUES (2, ?)", (sqlite3.Binary(serialize(test_vector)),))
+        conn.commit()
+
+        with patch("orion.memory.retrieval.embed", new=AsyncMock(return_value=test_vector)):
+            # "completely different words" won't match FTS
+            results = await hybrid_search(conn, "completely different words", k=5)
+
+        assert len(results) == 1
+        assert results[0]["content"] == "semantic meaning"
+    finally:
+        conn.close()

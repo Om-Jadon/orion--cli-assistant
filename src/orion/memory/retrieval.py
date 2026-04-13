@@ -2,7 +2,6 @@ import logging
 import sqlite3
 from orion.memory.embeddings import embed, serialize
 
-MIN_RRF_SCORE = 0.01  # minimum combined RRF score to include a result
 logger = logging.getLogger(__name__)
 
 def _fts_escape(query: str) -> str:
@@ -46,7 +45,6 @@ async def hybrid_search(conn: sqlite3.Connection, query: str, k: int = 5) -> lis
 
     top_ids = [
         r for r in sorted(rrf_scores, key=lambda r: rrf_scores[r], reverse=True)[:k]
-        if rrf_scores[r] >= MIN_RRF_SCORE
     ]
 
     results = []

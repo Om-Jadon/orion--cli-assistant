@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "orion-cli"
-version = "1.0.0"
+dynamic = ["version"]
 description = "A Linux-first CLI AI assistant"
 readme = "README.md"
 requires-python = ">=3.13"
@@ -20,6 +20,9 @@ dependencies = [
     "sqlite-vec>=0.1.9",
     "trafilatura>=2.0.0",
 ]
+
+[tool.hatch.version]
+path = "src/orion/config.py"
 
 [project.scripts]
 orion = "orion.main:cli_entry"

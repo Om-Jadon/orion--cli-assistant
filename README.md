@@ -57,7 +57,7 @@ uv run orion
 
 ## Quality and Verification
 
-Orion is distribution-ready with a **176-test suite** covering core logic, tool isolation, and UI resilience.
+Orion is distribution-ready with a **197-test suite** covering core logic, tool isolation, and UI resilience.
 
 ```bash
 uv run pytest

@@ -10,15 +10,15 @@ from rich.align import Align
 from orion import config
 from orion.core.model_fallback import get_recommended_model
 
-console = Console()
+from orion.ui.renderer import console
 
-# --- Palette (Catppuccin Mocha) ---
-C_PRIMARY = "#89B4FA"  # Sapphire
-C_SUCCESS = "#A6E3A1"  # Green
-C_WARN    = "#F9E2AF"  # Yellow
-C_ERROR   = "#F38BA8"  # Red
-C_DIM     = "#6C7086"  # Overlay0
-C_TEXT    = "#CDD6F4"  # Text
+# --- Palette ---
+C_PRIMARY = "accent"
+C_SUCCESS = "success"
+C_WARN    = "warning"
+C_ERROR   = "error"
+C_DIM     = "dim"
+C_TEXT    = "user"
 from orion.ui.renderer import print_system_error
 
 def _print_step(step: int, total: int, title: str):
@@ -81,7 +81,7 @@ def run_onboarding() -> tuple[str | None, str | None, str | None, str | None, st
             welcome_msg,
             subtitle=f"[{C_DIM}]v{config.__version__}[/{C_DIM}]",
             box=box.ROUNDED,
-            border_style="#cba6f7",
+            border_style="orion",
             padding=(1, 6)
         )))
         
@@ -176,7 +176,7 @@ def run_onboarding() -> tuple[str | None, str | None, str | None, str | None, st
             summary,
             title=f"[{C_SUCCESS}]Configuration Summary[/{C_SUCCESS}]",
             box=box.ROUNDED,
-            border_style="#cba6f7",
+            border_style="orion",
             padding=(1, 4)
         )))
         
